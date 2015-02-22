@@ -1,0 +1,6 @@
+[Unit]
+Description=peterad service
+
+[Service]
+ExecStart=@PETERAD_BINARY@ @PETERAD_CONF@/@PACKAGE_NAME@d.pem @PETERAD_CONF@/encrypt.pem @PETERAD_CONF@/decrypt.d
+StandardError=syslog

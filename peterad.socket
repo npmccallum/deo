@@ -1,0 +1,8 @@
+[Unit]
+Description=peterad socket
+
+[Socket]
+ListenStream=5700
+
+[Install]
+WantedBy=multi-user.target
