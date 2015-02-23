@@ -6,7 +6,7 @@ AM_CFLAGS = @OPENSSL_CFLAGS@ @LIBSYSTEMD_CFLAGS@ \
 	-Wno-missing-field-initializers \
 	-Wno-unused-parameter
 
-bin_PROGRAMS = peterad peterac
+bin_PROGRAMS = peterad petera
 COMMON = \
 	src/asn1.c \
 	src/asn1.h \
@@ -24,7 +24,7 @@ peterad_SOURCES = $(COMMON) \
 	src/s_decrypt.h \
 	src/s_run.c
 
-peterac_SOURCES = $(COMMON) \
+petera_SOURCES = $(COMMON) \
 	src/c_fetch.c \
 	src/c_fetch.h \
 	src/c_encrypt.c \
