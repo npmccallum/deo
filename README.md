@@ -2,11 +2,31 @@
 
 ##### Welcome to Petera!
 Petera is a system service and client for binding data to your local network.
-The concept of this application is simple.
+The concept of this application is simple, but let's look at an example.
+
+###### Use Case: Network-bound Automatic Disk Decryption
+Suppose you have a disk with sensitive data. If it breaks, you can't just
+send it back for repair. This could expose the data. Nor can you just throw
+it away.
+
+You could encrypt the disk. This would let you repair or discard the disk. But
+now you have to remember a password and manually enter it on every boot. This
+doesn't scale.
+
+What you need is a way to encrypt the disk using a high entropy key and then
+making it so that this key can be used automatically when you are on the
+network, but not otherwise.
+
+The solution to this problem is encrypting the key in such a way that it can
+only be decrypted when you are on the network. Hence, you bind the key to
+the network.
+
+This is precisely what Petera does. Let's look at how it works.
 
 ###### Online Operation
-First, you encrypt some data to one or more particular servers. This data is
-usually a key to decrypt some secondary data.
+First, you encrypt some data to one or more particular servers. As mentioned
+in the example above, this data is usually a key to decrypt some secondary
+data.
 
     $ petera anchor.pem encrypt one.me.com ... < key.txt > key.enc
 
