@@ -82,6 +82,9 @@ load_encryption_chain(const char *filename)
             return NULL;
     }
 
+    if (sk_X509_num(certs) == 0)
+        return NULL;
+
     return STEAL(certs);
 }
 
