@@ -32,18 +32,18 @@ validate_chain(SSL_CTX *ctx, STACK_OF(X509) *certs)
     X509_STORE *store;
 
     if (certs == NULL || sk_X509_num(certs) == 0)
-        return NULL;
+        return false;
 
     store = SSL_CTX_get_cert_store(ctx);
     if (store == NULL)
-        return NULL;
+        return false;
 
     sctx = X509_STORE_CTX_new();
     if (sctx == NULL)
-        return NULL;
+        return false;
 
     if (X509_STORE_CTX_init(sctx, store, sk_X509_value(certs, 0), certs) <= 0)
-        return NULL;
+        return false;
 
     return X509_verify_cert(sctx) > 0;
 }
