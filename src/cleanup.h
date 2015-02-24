@@ -34,13 +34,13 @@
 
 #define DEFINE_CLEANUP(type) \
     void cleanup_ ## type(type **x) { \
-        if (x == NULL) return; \
+        if (x == NULL || *x == NULL) return; \
         type ## _free(*x); \
     }
 
 #define DEFINE_CLEANUP_STACK(type) \
     void cleanup_sk_ ## type(STACK_OF(type) **x) { \
-        if (x == NULL) return; \
+        if (x == NULL || *x == NULL) return; \
         sk_ ## type ## _pop_free(*x, type ## _free); \
     }
 
