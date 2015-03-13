@@ -25,14 +25,95 @@
 
 #include <stdbool.h>
 
+static bool
+decrypt(PETERA_HEADER *hdr, ASN1_OCTET_STRING *key)
+{
+    const EVP_CIPHER *cipher = NULL;
+    AUTO(EVP_CIPHER_CTX, cctx);
+    uint8_t ct[4096];
+    size_t tlen = 0;
+
+    if (!hdr || !key)
+        return false;
+
+    cipher = EVP_get_cipherbyobj(hdr->req->cipher);
+    if (cipher == NULL)
+        return false;
+
+    switch (EVP_CIPHER_nid(cipher)) {
+    case NID_aes_128_gcm:
+    case NID_aes_192_gcm:
+    case NID_aes_256_gcm:
+        tlen = EVP_GCM_TLS_TAG_LEN;
+        break;
+
+    default:
+        return false;
+    }
+
+    if (cipher->iv_len != hdr->iv->length)
+        return false;
+
+    if (key->length < cipher->key_len)
+        return false;
+
+    cctx = EVP_CIPHER_CTX_new();
+    if (!cctx)
+        return false;
+
+    if (EVP_DecryptInit_ex(cctx, cipher, NULL,
+                           key->data, hdr->iv->data) != 1)
+        return false;
+
+    for (size_t ctl = 0; !feof(stdin); ) {
+        uint8_t pt[sizeof(ct) + EVP_MAX_BLOCK_LENGTH];
+        int ptl = 0;
+
+        ctl += fread(ct + ctl, 1, sizeof(ct) - ctl, stdin);
+        if (ferror(stdin))
+            return false;
+
+        if (ctl < tlen) {
+            if (feof(stdin))
+                return false;
+            continue;
+        }
+
+        ptl = 0;
+        if (EVP_DecryptUpdate(cctx, pt, &ptl, ct, ctl - tlen) != 1)
+            return false;
+
+        memmove(ct, ct + ctl - tlen, tlen);
+        ctl = tlen;
+
+        if (feof(stdin)) {
+            int tmp = 0;
+
+            if (EVP_CIPHER_CTX_ctrl(cctx, EVP_CTRL_GCM_SET_TAG,
+                                    tlen, ct) != 1)
+                return false;
+
+            if (EVP_DecryptFinal_ex(cctx, pt + ptl, &tmp) != 1)
+                return false;
+
+            ptl += tmp;
+        }
+
+        if (fwrite(pt, 1, ptl, stdout) != (size_t) ptl)
+            return false;
+    }
+
+    return true;
+}
+
 int
 cmd_decrypt(SSL_CTX *ctx, int argc, const char **argv)
 {
-    AUTO(PETERA_MSG_DEC_REQ, dr);
+    AUTO(PETERA_HEADER, hdr);
     bool success = false;
 
-    dr = d2i_fp_max(&PETERA_MSG_DEC_REQ_it, stdin, NULL, PETERA_MAX_INPUT);
-    if (dr == NULL) {
+    hdr = d2i_fp_max(&PETERA_HEADER_it, stdin, NULL, PETERA_MAX_INPUT);
+    if (hdr == NULL) {
         ERR_print_errors_fp(stderr);
         return EXIT_FAILURE;
     }
@@ -60,7 +141,7 @@ cmd_decrypt(SSL_CTX *ctx, int argc, const char **argv)
 
         if (ASN1_item_i2d_bio(&PETERA_MSG_it, io, &(PETERA_MSG) {
                 .type = PETERA_MSG_TYPE_DEC_REQ,
-                .value.dec_req = dr
+                .value.dec_req = hdr->req
             }) <= 0)
             return EXIT_FAILURE;
 
@@ -75,9 +156,7 @@ cmd_decrypt(SSL_CTX *ctx, int argc, const char **argv)
             break;
 
         case PETERA_MSG_TYPE_DEC_REP:
-            fwrite(in->value.dec_rep->data, 1,
-                   in->value.dec_rep->length, stdout);
-            success = true;
+            success = decrypt(hdr, in->value.dec_rep);
             break;
 
         default:

@@ -90,58 +90,104 @@ find_key_prv(STACK_OF(X509_INFO) *infos, const EVP_MD *md,
     return false;
 }
 
-static PETERA_PLAINTEXT *
+static ASN1_OCTET_STRING *
 unseal(const EVP_CIPHER *cipher, ASN1_OCTET_STRING *key, EVP_PKEY *prv,
-       PETERA_CIPHERTEXT *ct)
+       PETERA_MSG_DEC_REQ *dr)
 {
+    uint8_t buf[dr->data->length];
+    ASN1_OCTET_STRING pt = {
+        .type = V_ASN1_OCTET_STRING,
+        .length = 0,
+        .data = buf
+    };
     AUTO(EVP_CIPHER_CTX, cctx);
-    uint8_t buf[ct->data->length];
-    int bufl;
     int len;
 
-    if (EVP_CIPHER_iv_length(cipher) != ct->iv->length)
-        return NULL;
-
-    /* Perform decryption. */
     cctx = EVP_CIPHER_CTX_new();
     if (cctx == NULL)
         return NULL;
 
     if (EVP_OpenInit(cctx, cipher, key->data, key->length,
-                     ct->iv->data, prv) != 1)
+                     dr->iv->data, prv) != 1)
         return NULL;
 
-    if (EVP_OpenUpdate(cctx, buf, &len, ct->data->data,
-                       ct->data->length) != 1)
+    if (EVP_OpenUpdate(cctx, buf, &len, dr->data->data,
+                       dr->data->length) != 1)
         return NULL;
-    bufl = len;
+    pt.length = len;
+
+    if (EVP_CIPHER_CTX_ctrl(cctx, EVP_CTRL_GCM_SET_TAG,
+                            dr->tag->length, dr->tag->data) != 1)
+        return NULL;
 
     if (EVP_OpenFinal(cctx, &buf[len], &len) != 1)
         return NULL;
-    bufl += len;
+    pt.length += len;
 
-    return d2i_PETERA_PLAINTEXT(NULL, &(const uint8_t *) { buf }, bufl);
+    return ASN1_OCTET_STRING_dup(&pt);
+}
+
+static const EVP_CIPHER *
+load_cipher(PETERA_MSG_DEC_REQ *dr)
+{
+    const EVP_CIPHER *cipher = NULL;
+
+    switch (OBJ_obj2nid(dr->cipher)) {
+    case NID_aes_128_gcm:
+    case NID_aes_192_gcm:
+    case NID_aes_256_gcm:
+        if (EVP_GCM_TLS_TAG_LEN == dr->tag->length)
+            break;
+
+    default:
+        return NULL;
+    }
+
+    cipher = EVP_get_cipherbyobj(dr->cipher);
+    if (cipher == NULL)
+        return NULL;
+
+    if (EVP_CIPHER_iv_length(cipher) != dr->iv->length)
+        return NULL;
+
+    return cipher;
+}
+
+static const EVP_MD *
+load_digest(PETERA_MSG_DEC_REQ *dr)
+{
+    switch (OBJ_obj2nid(dr->digest)) {
+    case NID_sha1:
+    case NID_sha224:
+    case NID_sha256:
+    case NID_sha384:
+    case NID_sha512:
+        return EVP_get_digestbyobj(dr->digest);
+
+    default:
+        return NULL;
+    }
 }
 
 PETERA_ERR
-decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, PETERA_PLAINTEXT **pt)
+decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt)
 {
     const EVP_CIPHER *cipher = NULL;
     const EVP_MD *digest = NULL;
     ASN1_OCTET_STRING *key = NULL;
     EVP_PKEY *prv = NULL;
 
-    cipher = EVP_get_cipherbyobj(dr->parameters->cipher);
+    cipher = load_cipher(dr);
     if (cipher == NULL)
         return PETERA_ERR_NOSUPPORT_CIPHER;
 
-    digest = EVP_get_digestbyobj(dr->parameters->digest);
+    digest = load_digest(dr);
     if (digest == NULL)
         return PETERA_ERR_NOSUPPORT_DIGEST;
 
-    if (!find_key_prv(ctx->dec, digest, dr->ciphertext->keys, &key, &prv))
+    if (!find_key_prv(ctx->dec, digest, dr->keys, &key, &prv))
         return PETERA_ERR_NOTFOUND_KEY;
 
-    *pt = unseal(cipher, key, prv, dr->ciphertext);
+    *pt = unseal(cipher, key, prv, dr);
     return *pt == NULL ? PETERA_ERR_INTERNAL : PETERA_ERR_NONE;
 }

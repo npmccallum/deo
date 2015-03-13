@@ -22,30 +22,18 @@
 #include <openssl/x509.h>
 
 typedef struct {
-    ASN1_OCTET_STRING *confounder;
-    ASN1_OCTET_STRING *plaintext;
-} PETERA_PLAINTEXT;
-
-typedef struct {
-    ASN1_OBJECT *cipher;
-    ASN1_OBJECT *digest;
-} PETERA_PARAMETERS;
-
-typedef struct {
     ASN1_OCTET_STRING *hash;
     ASN1_OCTET_STRING *key;
 } PETERA_KEY;
 
-/* NOTE: We don't currently MAC anything. */
 typedef struct {
+    ASN1_OBJECT *cipher;
+    ASN1_OBJECT *digest;
+
     STACK_OF(PETERA_KEY) *keys;
     ASN1_OCTET_STRING *data;
+    ASN1_OCTET_STRING *tag;
     ASN1_OCTET_STRING *iv;
-} PETERA_CIPHERTEXT;
-
-typedef struct {
-    PETERA_PARAMETERS *parameters;
-    PETERA_CIPHERTEXT *ciphertext;
 } PETERA_MSG_DEC_REQ;
 
 typedef enum {
@@ -75,12 +63,15 @@ typedef struct {
     } value;
 } PETERA_MSG;
 
-DECLARE_ASN1_FUNCTIONS(PETERA_PLAINTEXT)
-DECLARE_ASN1_FUNCTIONS(PETERA_PARAMETERS)
+typedef struct {
+    PETERA_MSG_DEC_REQ *req;
+    ASN1_OCTET_STRING *iv;
+} PETERA_HEADER;
+
 DECLARE_ASN1_FUNCTIONS(PETERA_KEY)
-DECLARE_ASN1_FUNCTIONS(PETERA_CIPHERTEXT)
 DECLARE_ASN1_FUNCTIONS(PETERA_MSG_DEC_REQ)
 DECLARE_ASN1_FUNCTIONS(PETERA_MSG)
+DECLARE_ASN1_FUNCTIONS(PETERA_HEADER)
 
 #define SEND_ERR(bio, err) \
     ASN1_item_i2d_bio(&PETERA_MSG_it, bio, &(PETERA_MSG) { \

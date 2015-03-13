@@ -150,7 +150,7 @@ run(int argc, char **argv)
     while (true) {
         __attribute__((cleanup(cleanup_fd))) int cfd = -1;
         PETERA_ERR err = PETERA_ERR_NONE;
-        AUTO(PETERA_PLAINTEXT, pt);
+        AUTO(ASN1_OCTET_STRING, pt);
         AUTO(PETERA_MSG, in);
         AUTO(BIO, sio);
         int lfd;
@@ -182,7 +182,7 @@ run(int argc, char **argv)
 
             ASN1_item_i2d_bio(&PETERA_MSG_it, sio, &(PETERA_MSG) {
                 .type = PETERA_MSG_TYPE_DEC_REP,
-                .value.dec_rep = pt->plaintext
+                .value.dec_rep = pt
             });
             break;
 

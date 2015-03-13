@@ -21,4 +21,4 @@
 #include "s_ctx.h"
 
 PETERA_ERR
-decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, PETERA_PLAINTEXT **pt);
+decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt);

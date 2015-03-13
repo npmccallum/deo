@@ -30,57 +30,22 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-static PETERA_PLAINTEXT *
-get_plaintext(const EVP_CIPHER *cipher, FILE *fp)
-{
-    AUTO(PETERA_PLAINTEXT, pt);
-
-    uint8_t conf[EVP_CIPHER_block_size(cipher)];
-    uint8_t input[PETERA_MAX_INPUT / 2];
-    int inputl;
-
-    pt = PETERA_PLAINTEXT_new();
-    if (pt == NULL)
-        return NULL;
-
-    inputl = fread(input, 1, sizeof(input), fp);
-    if (input == 0 || inputl == sizeof(input))
-        return NULL;
-
-    if (ASN1_OCTET_STRING_set(pt->plaintext, input, inputl) <= 0)
-        return NULL;
-
-    if (RAND_bytes(conf, sizeof(conf)) <= 0)
-        return NULL;
-
-    if (ASN1_OCTET_STRING_set(pt->confounder, conf, sizeof(conf)) <= 0)
-        return NULL;
-
-    return STEAL(pt);
-}
-
 static bool
-seal(const EVP_CIPHER *cipher, const EVP_MD *md,
-     X509 **certs, size_t ncerts, PETERA_PLAINTEXT *ppt,
-     PETERA_CIPHERTEXT *pct)
+seal(const EVP_CIPHER *cipher, const EVP_MD *md, const X509 **certs,
+     size_t ncerts, uint8_t *data, size_t dlen, PETERA_MSG_DEC_REQ *dr)
 {
-    AUTO(EVP_CIPHER_CTX, cctx);
-    AUTO(uint8_t, key);
-    AUTO(uint8_t, pt);
-    AUTO(uint8_t, ct);
-
+    uint8_t ct[dlen + EVP_CIPHER_block_size(cipher) - 1];
     uint8_t iv[EVP_CIPHER_iv_length(cipher)];
+    uint8_t tag[EVP_GCM_TLS_TAG_LEN];
+    AUTO(EVP_CIPHER_CTX, cctx);
     uint8_t *ekeys[ncerts];
     EVP_PKEY *keys[ncerts];
     int ekeysl[ncerts];
+    AUTO(uint8_t, key);
+
     bool ret = false;
-    int ptl = 0;
     int ctl = 0;
     int tmp = 0;
-
-    ptl = i2d_PETERA_PLAINTEXT(ppt, &pt);
-    if (pt == NULL)
-        goto error;
 
     for (size_t i = 0; i < ncerts; i++) {
         uint8_t digest[EVP_MAX_MD_SIZE];
@@ -96,47 +61,50 @@ seal(const EVP_CIPHER *cipher, const EVP_MD *md,
         if (k == NULL)
             goto error;
 
-        if (SKM_sk_push(PETERA_KEY, pct->keys, k) <= 0) {
+        if (SKM_sk_push(PETERA_KEY, dr->keys, k) != 1) {
             PETERA_KEY_free(k);
             goto error;
         }
 
-        if (X509_digest(certs[i], md, digest, &dlen) <= 0)
+        if (X509_digest(certs[i], md, digest, &dlen) != 1)
             goto error;
 
-        if (ASN1_OCTET_STRING_set(k->hash, digest, dlen) <= 0)
+        if (ASN1_OCTET_STRING_set(k->hash, digest, dlen) != 1)
             goto error;
     }
-
-    ct = OPENSSL_malloc(ptl + EVP_CIPHER_block_size(cipher) - 1);
-    if (ct == NULL)
-        goto error;
 
     cctx = EVP_CIPHER_CTX_new();
-    if (cctx == NULL)
+    if (!cctx)
+        return false;
+
+    if (EVP_SealInit(cctx, cipher, ekeys, ekeysl, iv, keys, ncerts) != 1)
         goto error;
 
-    if (EVP_SealInit(cctx, cipher, ekeys, ekeysl, iv, keys, ncerts) <= 0)
+    if (ASN1_OCTET_STRING_set(dr->iv, iv, sizeof(iv)) != 1)
         goto error;
 
-    if (ASN1_OCTET_STRING_set(pct->iv, iv, sizeof(iv)) <= 0)
-        goto error;
-
-    for (int i = 0; i < SKM_sk_num(PETERA_KEY, pct->keys); i++) {
-        PETERA_KEY *k = SKM_sk_value(PETERA_KEY, pct->keys, i);
-        if (ASN1_OCTET_STRING_set(k->key, ekeys[i], ekeysl[i]) <= 0)
+    for (int i = 0; i < SKM_sk_num(PETERA_KEY, dr->keys); i++) {
+        PETERA_KEY *k = SKM_sk_value(PETERA_KEY, dr->keys, i);
+        if (ASN1_OCTET_STRING_set(k->key, ekeys[i], ekeysl[i]) != 1)
             goto error;
     }
 
-    if (EVP_SealUpdate(cctx, ct, &tmp, pt, ptl) <= 0)
+    if (EVP_SealUpdate(cctx, ct, &tmp, data, dlen) != 1)
         goto error;
     ctl = tmp;
 
-    if (EVP_SealFinal(cctx, ct + ctl, &tmp) <= 0)
+    if (EVP_SealFinal(cctx, ct + ctl, &tmp) != 1)
         goto error;
     ctl += tmp;
 
-    if (ASN1_OCTET_STRING_set(pct->data, ct, ctl) <= 0)
+    if (ASN1_OCTET_STRING_set(dr->data, ct, ctl) != 1)
+        goto error;
+
+    if (EVP_CIPHER_CTX_ctrl(cctx, EVP_CTRL_GCM_GET_TAG,
+                            sizeof(tag), tag) != 1)
+        goto error;
+
+    if (ASN1_OCTET_STRING_set(dr->tag, tag, sizeof(tag)) != 1)
         goto error;
 
     ret = true;
@@ -146,30 +114,6 @@ error:
         OPENSSL_free(ekeys[i]);
 
     return ret;
-}
-
-static PETERA_MSG_DEC_REQ *
-prepare(const EVP_CIPHER **cipher, const EVP_MD **digest)
-{
-    AUTO(PETERA_MSG_DEC_REQ, dr);
-
-    *cipher = EVP_aes_128_cbc();
-    *digest = EVP_sha224();
-    if (*cipher == NULL || *digest == NULL)
-        return NULL;
-
-    dr = PETERA_MSG_DEC_REQ_new();
-    if (dr == NULL)
-        return NULL;
-
-    ASN1_OBJECT_free(dr->parameters->cipher);
-    ASN1_OBJECT_free(dr->parameters->digest);
-    dr->parameters->cipher = OBJ_nid2obj(EVP_CIPHER_nid(*cipher));
-    dr->parameters->digest = OBJ_nid2obj(EVP_MD_type(*digest));
-    if (dr->parameters->cipher == NULL || dr->parameters->digest == NULL)
-        return NULL;
-
-    return STEAL(dr);
 }
 
 static STACK_OF(X509) *
@@ -202,7 +146,7 @@ load_chain(SSL_CTX *ctx, const char *location)
         if (cert == NULL)
             return NULL;
 
-        if (sk_X509_push(chain, cert) <= 0) {
+        if (sk_X509_push(chain, cert) != 1) {
             X509_free(cert);
             return NULL;
         }
@@ -216,31 +160,24 @@ load_chain(SSL_CTX *ctx, const char *location)
     return STEAL(chain);
 }
 
-int
-cmd_encrypt(SSL_CTX *ctx, int argc, const char **argv)
+static bool
+make_key(SSL_CTX *ctx, const EVP_CIPHER *cipher, const EVP_MD *digest,
+         int argc, const char **argv, PETERA_MSG_DEC_REQ *dr, uint8_t *key)
 {
-    AUTO(PETERA_MSG_DEC_REQ, dr);
-    AUTO(PETERA_PLAINTEXT, pt);
-
-    const EVP_CIPHER *cipher = NULL;
-    const EVP_MD *digest = NULL;
-    int ret = EXIT_FAILURE;
-    X509 *certs[argc];
-
     STACK_OF(X509) *chains[argc];
+    const X509 *certs[argc];
+    bool ret = false;
 
     memset(chains, 0, sizeof(chains));
     memset(certs, 0, sizeof(certs));
 
-    dr = prepare(&cipher, &digest);
-    if (dr == NULL)
-        goto error;
+    if (!cipher || !digest || !argv || !dr || !key)
+        return false;
 
-    pt = get_plaintext(cipher, stdin);
-    if (pt == NULL)
-        goto error;
+    if (RAND_bytes(key, cipher->key_len) != 1)
+        return false;
 
-    for (int i = 0 ; i < argc; i++) {
+    for (int i = 0; i < argc; i++) {
         chains[i] = load_chain(ctx, argv[i]);
         if (chains[i] == NULL)
             goto error;
@@ -250,13 +187,14 @@ cmd_encrypt(SSL_CTX *ctx, int argc, const char **argv)
             goto error;
     }
 
-    if (!seal(cipher, digest, certs, argc, pt, dr->ciphertext))
-        goto error;
+    ASN1_OBJECT_free(dr->cipher);
+    ASN1_OBJECT_free(dr->digest);
+    dr->cipher = OBJ_nid2obj(EVP_CIPHER_nid(cipher));
+    dr->digest = OBJ_nid2obj(EVP_MD_type(digest));
+    if (dr->cipher == NULL || dr->digest == NULL)
+        return false;
 
-    if (ASN1_item_i2d_fp(&PETERA_MSG_DEC_REQ_it, stdout, dr) <= 0)
-        goto error;
-
-    ret = EXIT_SUCCESS;
+    ret = seal(cipher, digest, certs, argc, key, cipher->key_len, dr);
 
 error:
     for (int i = 0; i < argc; i++)
@@ -264,4 +202,77 @@ error:
 
     ERR_print_errors_fp(stderr);
     return ret;
+}
+
+int
+cmd_encrypt(SSL_CTX *ctx, int argc, const char **argv)
+{
+    const EVP_CIPHER *cipher = EVP_aes_256_gcm();
+    const EVP_MD *digest = EVP_sha256();
+    AUTO(EVP_CIPHER_CTX, cctx);
+    AUTO(PETERA_HEADER, hdr);
+    uint8_t tag[EVP_GCM_TLS_TAG_LEN];
+    uint8_t key[EVP_MAX_KEY_LENGTH];
+    uint8_t iv[EVP_MAX_IV_LENGTH];
+    uint8_t pt[4096];
+    uint8_t ct[sizeof(pt) + EVP_MAX_BLOCK_LENGTH];
+    size_t ptl;
+    int ctl;
+
+    if (cipher == NULL || digest == NULL) {
+        fprintf(stderr, "Unable to initialize crypto!\n");
+        return EXIT_FAILURE;
+    }
+
+    hdr = PETERA_HEADER_new();
+    if (hdr == NULL)
+        return EXIT_FAILURE;
+
+    if (!make_key(ctx, cipher, digest, argc, argv, hdr->req, key))
+        return EXIT_FAILURE;
+
+    if (RAND_bytes(iv, cipher->iv_len) != 1)
+        return EXIT_FAILURE;
+
+    if (ASN1_OCTET_STRING_set(hdr->iv, iv, cipher->iv_len) != 1)
+        return EXIT_FAILURE;
+
+    if (ASN1_item_i2d_fp(&PETERA_HEADER_it, stdout, hdr) != 1)
+        return EXIT_FAILURE;
+
+    cctx = EVP_CIPHER_CTX_new();
+    if (!cctx)
+        return EXIT_FAILURE;
+
+    if (EVP_EncryptInit_ex(cctx, cipher, NULL, key, iv) != 1)
+        return EXIT_FAILURE;
+
+    while (!feof(stdin)) {
+        ptl = fread(pt, 1, sizeof(pt), stdin);
+        if (ferror(stdin))
+            return EXIT_FAILURE;
+
+        ctl = 0;
+        if (EVP_EncryptUpdate(cctx, ct, &ctl, pt, ptl) != 1)
+            return EXIT_FAILURE;
+
+        if (fwrite(ct, 1, ctl, stdout) != (size_t) ctl)
+            return EXIT_FAILURE;
+    }
+
+    ctl = 0;
+    if (EVP_EncryptFinal(cctx, ct, &ctl) != 1)
+        return EXIT_FAILURE;
+
+    if (fwrite(ct, 1, ctl, stdout) != (size_t) ctl)
+        return EXIT_FAILURE;
+
+    if (EVP_CIPHER_CTX_ctrl(cctx, EVP_CTRL_GCM_GET_TAG,
+                            sizeof(tag), tag) != 1)
+        return EXIT_FAILURE;
+
+    if (fwrite(tag, 1, sizeof(tag), stdout) != sizeof(tag))
+        return EXIT_FAILURE;
+
+    return EXIT_SUCCESS;
 }
