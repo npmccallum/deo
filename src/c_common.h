@@ -28,6 +28,5 @@ validate_chain(SSL_CTX *ctx, STACK_OF(X509) *certs);
 STACK_OF(X509) *
 fetch_chain(SSL_CTX *ctx, const char *host_port);
 
-int
-cmd_fetch(SSL_CTX *ctx, int argc, const char **argv);
-
+SSL_CTX *
+make_ssl_ctx(const char *anchor);

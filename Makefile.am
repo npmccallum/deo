@@ -25,12 +25,11 @@ peterad_SOURCES = $(COMMON) \
 	src/s_run.c
 
 petera_SOURCES = $(COMMON) \
-	src/c_fetch.c \
-	src/c_fetch.h \
+	src/c_common.c \
+	src/c_common.h \
+	src/c_query.c \
 	src/c_encrypt.c \
-	src/c_encrypt.h \
 	src/c_decrypt.c \
-	src/c_decrypt.h \
 	src/c_run.c
 
 dist_noinst_DATA = peterad.service.in

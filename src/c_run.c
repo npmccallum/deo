@@ -28,9 +28,14 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "c_fetch.h"
-#include "c_encrypt.h"
-#include "c_decrypt.h"
+int
+cmd_query(int argc, const char **argv);
+
+int
+cmd_encrypt(int argc, const char **argv);
+
+int
+cmd_decrypt(int argc, const char **argv);
 
 static const struct {
     const char *name;
@@ -38,25 +43,25 @@ static const struct {
     const char *stdin;
     const char *stdout;
     const char *args;
-    int (*cmd)(SSL_CTX *ctx, int argc, const char **argv);
+    int (*cmd)(int argc, const char **argv);
 } COMMANDS[] = {
-    { "fetch",
+    { "query",
       "Fetches and verifies a server's encryption certificate chain",
       "N/A",
       "PEM encoded certificate chain",
-      "<host[:port]>",
-      cmd_fetch },
+      "<anchor(s)> <host[:port]>",
+      cmd_query },
     { "encrypt",
       "Encrypts input to all specified certificates",
       "Plaintext data to encrypt",
       "Encryption of input data",
-      "<host[:port]|file> [...]",
+      "<anchor(s)> <host[:port]|file> [...]",
       cmd_encrypt },
     { "decrypt",
       "Decrypts input using any of the servers",
       "Ciphertext data to decrypt",
       "Decrypted plaintext",
-      "<host[:port]> [...]",
+      "<anchor(s)> <host[:port]> [...]",
       cmd_decrypt },
     {}
 };
@@ -64,40 +69,12 @@ static const struct {
 int
 run(int argc, const char **argv)
 {
-    AUTO(SSL_CTX, ctx);
-    struct stat st;
     int ret;
 
-    if (argc >= 4) {
-        ctx = SSL_CTX_new(TLSv1_2_client_method());
-        if (ctx == NULL)
-            return 1;
-
-        if (lstat(argv[1], &st) != 0) {
-            fprintf(stderr, "Anchor: %s\n", strerror(errno));
-            return 1;
-        }
-
-        if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode)) {
-            fprintf(stderr, "Anchor: invalid file type\n");
-            return 1;
-        }
-
-        if (S_ISREG(st.st_mode)
-            && SSL_CTX_load_verify_locations(ctx, argv[1], NULL) <= 0) {
-            ERR_print_errors_fp(stderr);
-            return 1;
-        }
-
-        if (S_ISDIR(st.st_mode)
-            && SSL_CTX_load_verify_locations(ctx, NULL, argv[1]) <= 0) {
-            ERR_print_errors_fp(stderr);
-            return 1;
-        }
-
+    if (argc >= 2) {
         for (int i = 0; COMMANDS[i].name != NULL; i++) {
-            if (strcmp(COMMANDS[i].name, argv[2]) == 0) {
-                ret = COMMANDS[i].cmd(ctx, argc - 3, &argv[3]);
+            if (strcmp(COMMANDS[i].name, argv[1]) == 0) {
+                ret = COMMANDS[i].cmd(argc - 2, &argv[2]);
                 if (ret == EINVAL)
                     break;
                 return ret;
@@ -106,7 +83,7 @@ run(int argc, const char **argv)
     }
 
     fprintf(stderr,
-            "Usage: %s <anchor(s)> <COMMAND> [...]\n\n",
+            "Usage: %s <COMMAND> [...]\n\n",
             argv[0]);
     fprintf(stderr, "COMMANDS\n");
 

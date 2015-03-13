@@ -16,9 +16,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "c_common.h"
+#include "cleanup.h"
+#include "common.h"
 
-#include <openssl/ssl.h>
+#include <openssl/err.h>
+
+#include <stdbool.h>
+#include <errno.h>
 
 int
-cmd_decrypt(SSL_CTX *ctx, int argc, const char **argv);
+cmd_query(int argc, const char **argv)
+{
+    AUTO_STACK(X509, certs);
+    AUTO(SSL_CTX, ctx);
+
+    if (argc != 2)
+        return EINVAL;
+
+    ctx = make_ssl_ctx(argv[0]);
+    if (ctx == NULL)
+        return 1;
+
+    certs = fetch_chain(ctx, argv[1]);
+    if (certs == NULL) {
+        ERR_print_errors_fp(stderr);
+        return 1;
+    }
+
+    for (int i = 0; i < sk_X509_num(certs); i++)
+        PEM_write_X509(stdout, sk_X509_value(certs, i));
+
+    return 0;
+}

@@ -16,14 +16,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "c_fetch.h"
+#include "c_common.h"
 #include "cleanup.h"
 #include "common.h"
 
 #include <openssl/err.h>
 
-#include <stdbool.h>
-#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 bool
 validate_chain(SSL_CTX *ctx, STACK_OF(X509) *certs)
@@ -102,22 +103,37 @@ fetch_chain(SSL_CTX *ctx, const char *host_port)
     return STEAL(in->value.crt_rep);
 }
 
-int
-cmd_fetch(SSL_CTX *ctx, int argc, const char **argv)
+SSL_CTX *
+make_ssl_ctx(const char *anchor)
 {
-    AUTO_STACK(X509, certs);
+    AUTO(SSL_CTX, ctx);
+    struct stat st;
 
-    if (argc != 1)
-        return EINVAL;
+    ctx = SSL_CTX_new(TLSv1_2_client_method());
+    if (ctx == NULL)
+        return NULL;
 
-    certs = fetch_chain(ctx, argv[0]);
-    if (certs == NULL) {
-        ERR_print_errors_fp(stderr);
-        return 1;
+    if (lstat(anchor, &st) != 0) {
+        fprintf(stderr, "Anchor: %s\n", strerror(errno));
+        return NULL;
     }
 
-    for (int i = 0; i < sk_X509_num(certs); i++)
-        PEM_write_X509(stdout, sk_X509_value(certs, i));
+    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode)) {
+        fprintf(stderr, "Anchor: invalid file type\n");
+        return NULL;
+    }
 
-    return 0;
+    if (S_ISREG(st.st_mode)
+        && SSL_CTX_load_verify_locations(ctx, anchor, NULL) <= 0) {
+        ERR_print_errors_fp(stderr);
+        return NULL;
+    }
+
+    if (S_ISDIR(st.st_mode)
+        && SSL_CTX_load_verify_locations(ctx, NULL, anchor) <= 0) {
+        ERR_print_errors_fp(stderr);
+        return NULL;
+    }
+
+    return STEAL(ctx);
 }

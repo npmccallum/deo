@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "c_decrypt.h"
+#include "c_common.h"
 #include "cleanup.h"
 #include "d2i.h"
 #include "common.h"
@@ -107,10 +107,18 @@ decrypt(PETERA_HEADER *hdr, ASN1_OCTET_STRING *key)
 }
 
 int
-cmd_decrypt(SSL_CTX *ctx, int argc, const char **argv)
+cmd_decrypt(int argc, const char **argv)
 {
     AUTO(PETERA_HEADER, hdr);
+    AUTO(SSL_CTX, ctx);
     bool success = false;
+
+    if (argc < 2)
+        return EINVAL;
+
+    ctx = make_ssl_ctx(argv[0]);
+    if (ctx == NULL)
+        return EXIT_FAILURE;
 
     hdr = d2i_fp_max(&PETERA_HEADER_it, stdin, NULL, PETERA_MAX_INPUT);
     if (hdr == NULL) {
@@ -118,7 +126,7 @@ cmd_decrypt(SSL_CTX *ctx, int argc, const char **argv)
         return EXIT_FAILURE;
     }
 
-    for (int i = 0; !success && i < argc; i++) {
+    for (int i = 1; !success && i < argc; i++) {
         PETERA_ERR err = PETERA_ERR_NONE;
         AUTO(PETERA_MSG, in);
         AUTO(X509, cert);

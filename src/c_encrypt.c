@@ -16,8 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "c_encrypt.h"
-#include "c_fetch.h"
+#include "c_common.h"
 #include "cleanup.h"
 #include "d2i.h"
 #include "common.h"
@@ -205,19 +204,29 @@ error:
 }
 
 int
-cmd_encrypt(SSL_CTX *ctx, int argc, const char **argv)
+cmd_encrypt(int argc, const char **argv)
 {
     const EVP_CIPHER *cipher = EVP_aes_256_gcm();
     const EVP_MD *digest = EVP_sha256();
     AUTO(EVP_CIPHER_CTX, cctx);
     AUTO(PETERA_HEADER, hdr);
+    AUTO(SSL_CTX, ctx);
+
     uint8_t tag[EVP_GCM_TLS_TAG_LEN];
     uint8_t key[EVP_MAX_KEY_LENGTH];
     uint8_t iv[EVP_MAX_IV_LENGTH];
     uint8_t pt[4096];
     uint8_t ct[sizeof(pt) + EVP_MAX_BLOCK_LENGTH];
+
     size_t ptl;
     int ctl;
+
+    if (argc < 2)
+        return EINVAL;
+
+    ctx = make_ssl_ctx(argv[0]);
+    if (ctx == NULL)
+        return EXIT_FAILURE;
 
     if (cipher == NULL || digest == NULL) {
         fprintf(stderr, "Unable to initialize crypto!\n");
@@ -228,7 +237,7 @@ cmd_encrypt(SSL_CTX *ctx, int argc, const char **argv)
     if (hdr == NULL)
         return EXIT_FAILURE;
 
-    if (!make_key(ctx, cipher, digest, argc, argv, hdr->req, key))
+    if (!make_key(ctx, cipher, digest, argc - 1, &argv[1], hdr->req, key))
         return EXIT_FAILURE;
 
     if (RAND_bytes(iv, cipher->iv_len) != 1)
