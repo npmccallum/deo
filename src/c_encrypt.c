@@ -116,15 +116,10 @@ error:
 }
 
 static STACK_OF(X509) *
-load_chain(SSL_CTX *ctx, const char *location)
+load_chain(SSL_CTX *ctx, const char *location, FILE *fp)
 {
     AUTO_STACK(X509_INFO, infos);
     AUTO_STACK(X509, chain);
-    AUTO(FILE, fp);
-
-    fp = fopen(location, "r");
-    if (fp == NULL)
-        return fetch_chain(ctx, location);
 
     infos = PEM_X509_INFO_read(fp, NULL, NULL, NULL);
     if (infos == NULL)
@@ -145,7 +140,7 @@ load_chain(SSL_CTX *ctx, const char *location)
         if (cert == NULL)
             return NULL;
 
-        if (sk_X509_push(chain, cert) != 1) {
+        if (sk_X509_push(chain, cert) <= 0) {
             X509_free(cert);
             return NULL;
         }
@@ -161,7 +156,8 @@ load_chain(SSL_CTX *ctx, const char *location)
 
 static bool
 make_key(SSL_CTX *ctx, const EVP_CIPHER *cipher, const EVP_MD *digest,
-         int argc, const char **argv, PETERA_MSG_DEC_REQ *dr, uint8_t *key)
+         int argc, const char **argv, STACK_OF(ASN1_UTF8STRING) *targets,
+         PETERA_MSG_DEC_REQ *dr, uint8_t *key)
 {
     STACK_OF(X509) *chains[argc];
     const X509 *certs[argc];
@@ -177,13 +173,54 @@ make_key(SSL_CTX *ctx, const EVP_CIPHER *cipher, const EVP_MD *digest,
         return false;
 
     for (int i = 0; i < argc; i++) {
-        chains[i] = load_chain(ctx, argv[i]);
+        ASN1_UTF8STRING *target = NULL;
+        AUTO(FILE, fp);
+
+        fp = fopen(argv[i], "r");
+        if (fp == NULL)
+            chains[i] = fetch_chain(ctx, argv[i]);
+        else
+            chains[i] = load_chain(ctx, argv[i], fp);
         if (chains[i] == NULL)
             goto error;
 
         certs[i] = sk_value((_STACK*) chains[i], 0);
         if (certs[i] == NULL)
             goto error;
+
+        target = ASN1_UTF8STRING_new();
+        if (target == NULL)
+            goto error;
+
+        if (sk_ASN1_UTF8STRING_push(targets, target) != 1) {
+            ASN1_UTF8STRING_free(target);
+            goto error;
+        }
+
+        if (fp == NULL) {
+            if (ASN1_STRING_set(target, argv[i], strlen(argv[i])) != 1)
+                goto error;
+        } else {
+            X509_NAME_ENTRY *entry;
+            ASN1_STRING *string;
+            int idx;
+
+            idx = X509_NAME_get_index_by_NID(certs[i]->cert_info->subject,
+                                             NID_commonName, -1);
+            if (idx < 0)
+                goto error;
+
+            entry = X509_NAME_get_entry(certs[i]->cert_info->subject, idx);
+            if (entry == NULL)
+                goto error;
+
+            string = X509_NAME_ENTRY_get_data(entry);
+            if (string == NULL)
+                goto error;
+
+            if (ASN1_STRING_set(target, string->data, string->length) != 1)
+                goto error;
+        }
     }
 
     ASN1_OBJECT_free(dr->cipher);
@@ -237,7 +274,8 @@ cmd_encrypt(int argc, const char **argv)
     if (hdr == NULL)
         return EXIT_FAILURE;
 
-    if (!make_key(ctx, cipher, digest, argc - 1, &argv[1], hdr->req, key))
+    if (!make_key(ctx, cipher, digest, argc - 1, &argv[1],
+                  hdr->targets, hdr->req, key))
         return EXIT_FAILURE;
 
     if (RAND_bytes(iv, cipher->iv_len) != 1)

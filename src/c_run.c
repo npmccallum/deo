@@ -37,6 +37,12 @@ cmd_encrypt(int argc, const char **argv);
 int
 cmd_decrypt(int argc, const char **argv);
 
+int
+cmd_targets(int argc, const char **argv);
+
+int
+cmd_retarget(int argc, const char **argv);
+
 static const struct {
     const char *name;
     const char *doc;
@@ -52,17 +58,29 @@ static const struct {
       "<anchor(s)> <host[:port]>",
       cmd_query },
     { "encrypt",
-      "Encrypts input to all specified certificates",
+      "Encrypts input to all specified targets",
       "Plaintext data to encrypt",
       "Encryption of input data",
       "<anchor(s)> <host[:port]|file> [...]",
       cmd_encrypt },
     { "decrypt",
-      "Decrypts input using any of the servers",
+      "Decrypts input using any of the targets",
       "Ciphertext data to decrypt",
       "Decrypted plaintext",
-      "<anchor(s)> <host[:port]> [...]",
+      "<anchor(s)> [<host[:port]> ...]",
       cmd_decrypt },
+    { "targets",
+      "Prints the targets for encrypted input",
+      "Ciphertext data",
+      "List of targets",
+      "",
+      cmd_targets },
+    { "retarget",
+      "Changes the targets for a given ciphertext",
+      "Ciphertext data",
+      "Ciphertext data (with new targets)",
+      "<host[:port]> [...]",
+      cmd_retarget },
     {}
 };
 

@@ -110,15 +110,18 @@ int
 cmd_decrypt(int argc, const char **argv)
 {
     AUTO(PETERA_HEADER, hdr);
-    AUTO(SSL_CTX, ctx);
     bool success = false;
+    AUTO(SSL_CTX, ctx);
+    int max;
 
-    if (argc < 2)
+    if (argc < 1)
         return EINVAL;
 
     ctx = make_ssl_ctx(argv[0]);
     if (ctx == NULL)
         return EXIT_FAILURE;
+    argc--;
+    argv = &argv[1];
 
     hdr = d2i_fp_max(&PETERA_HEADER_it, stdin, NULL, PETERA_MAX_INPUT);
     if (hdr == NULL) {
@@ -126,9 +129,11 @@ cmd_decrypt(int argc, const char **argv)
         return EXIT_FAILURE;
     }
 
-    for (int i = 1; !success && i < argc; i++) {
+    max = argc + sk_ASN1_UTF8STRING_num(hdr->targets);
+    for (int i = 0; !success && i < max; i++) {
         PETERA_ERR err = PETERA_ERR_NONE;
         AUTO(PETERA_MSG, in);
+        AUTO(char, hostname);
         AUTO(X509, cert);
         AUTO(BIO, io);
 
@@ -136,9 +141,28 @@ cmd_decrypt(int argc, const char **argv)
         if (io == NULL)
             return EXIT_FAILURE;
 
+        if (i < argc) {
+            hostname = OPENSSL_strdup(argv[i]);
+            if (hostname == NULL)
+                return ENOMEM;
+        } else {
+            ASN1_UTF8STRING *str;
+            size_t len;
+
+            str = sk_ASN1_UTF8STRING_value(hdr->targets, i - argc);
+            len = strnlen((char *) str->data, str->length);
+
+            hostname = OPENSSL_malloc(len + 1);
+            if (hostname == NULL)
+                return ENOMEM;
+
+            memset(hostname, 0, len + 1);
+            strncpy(hostname, (char *) str->data, str->length);
+        }
+
         BIO_set_conn_port(io, PETERA_DEF_PORT);
         BIO_set_ssl_mode(io, SSL_MODE_AUTO_RETRY);
-        if (BIO_set_conn_hostname(io, argv[i]) <= 0)
+        if (BIO_set_conn_hostname(io, hostname) <= 0)
             return EXIT_FAILURE;
 
         if (BIO_do_connect(io) <= 0)

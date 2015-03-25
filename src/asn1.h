@@ -64,6 +64,7 @@ typedef struct {
 } PETERA_MSG;
 
 typedef struct {
+    STACK_OF(ASN1_UTF8STRING) *targets;
     PETERA_MSG_DEC_REQ *req;
     ASN1_OCTET_STRING *iv;
 } PETERA_HEADER;

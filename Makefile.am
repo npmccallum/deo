@@ -30,6 +30,8 @@ petera_SOURCES = $(COMMON) \
 	src/c_query.c \
 	src/c_encrypt.c \
 	src/c_decrypt.c \
+	src/c_retarget.c \
+	src/c_targets.c \
 	src/c_run.c
 
 dist_noinst_DATA = peterad.service.in

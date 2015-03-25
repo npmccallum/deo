@@ -55,6 +55,13 @@ cleanup_uint8_t(uint8_t **x)
 }
 
 void
+cleanup_char(char **x)
+{
+    if (x == NULL) return;
+    OPENSSL_free(*x);
+}
+
+void
 cleanup_FILE(FILE **x)
 {
     if (x == NULL || *x == NULL) return;
