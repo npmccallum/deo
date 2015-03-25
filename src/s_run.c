@@ -89,14 +89,6 @@ do_accept(SSL_CTX *ctx, int fd, int *client, BIO **sio)
 }
 
 static void
-cleanup_fd(int *fd)
-{
-    if (fd == NULL || *fd < 0)
-        return;
-    close(*fd);
-}
-
-static void
 on_signal(int sig)
 {
 }
@@ -148,11 +140,11 @@ run(int argc, char **argv)
     }
 
     while (true) {
-        __attribute__((cleanup(cleanup_fd))) int cfd = -1;
         PETERA_ERR err = PETERA_ERR_NONE;
         AUTO(ASN1_OCTET_STRING, pt);
         AUTO(PETERA_MSG, in);
         AUTO(BIO, sio);
+        AUTO_FD(cfd);
         int lfd;
 
         if (!have_conn(lfds, sock, &lfd))

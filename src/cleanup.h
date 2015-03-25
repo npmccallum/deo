@@ -50,6 +50,9 @@
 #define AUTO_STACK(type, name) \
     __attribute__((cleanup(cleanup_sk_ ## type))) STACK_OF(type) *name = NULL
 
+#define AUTO_FD(name) \
+    __attribute__((cleanup(cleanup_fd))) int name = -1
+
 #define STEAL(name) \
     ({ __typeof__(name) __tmp = name; name = NULL; __tmp; })
 
@@ -74,3 +77,6 @@ DECLARE_CLEANUP(PETERA_HEADER);
 DECLARE_CLEANUP(uint8_t);
 DECLARE_CLEANUP(FILE);
 DECLARE_CLEANUP(DIR);
+
+void
+cleanup_fd(int *fd);

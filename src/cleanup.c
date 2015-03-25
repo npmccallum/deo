@@ -17,6 +17,7 @@
  */
 
 #include "cleanup.h"
+#include <unistd.h>
 
 DEFINE_CLEANUP_STACK(X509_INFO)
 DEFINE_CLEANUP_STACK(X509)
@@ -65,4 +66,13 @@ cleanup_DIR(DIR **x)
 {
     if (x == NULL || *x == NULL) return;
     closedir(*x);
+}
+
+void
+cleanup_fd(int *fd)
+{
+    if (fd == NULL || *fd < 0)
+        return;
+
+    close(*fd);
 }
