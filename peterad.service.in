@@ -2,5 +2,5 @@
 Description=peterad service
 
 [Service]
-ExecStart=@PETERAD_BINARY@ @PETERAD_CONF@/@PACKAGE_NAME@d.pem @PETERAD_CONF@/encrypt.pem @PETERAD_CONF@/decrypt.d
+ExecStart=@PETERAD_BINARY@ @PETERA_CONF@/@PACKAGE_NAME@d.pem @PETERA_CONF@/encrypt.pem @PETERA_CONF@/decrypt.d
 StandardError=syslog

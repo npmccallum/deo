@@ -21,9 +21,9 @@ AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
 
 AC_SUBST([psysconfdir], [${sysconfdir}/${PACKAGE_NAME}])
 PETERAD_BINARY=${bindir}/${PACKAGE_NAME}d${EXEEXT}
-PETERAD_CONF=${psysconfdir}
+PETERA_CONF=${psysconfdir}
 AX_DEFINE_DIR(PETERAD_BINARY, PETERAD_BINARY, [Location of peterad binary])
-AX_DEFINE_DIR(PETERAD_CONF, PETERAD_CONF, [Location of peterad configuration])
+AX_DEFINE_DIR(PETERA_CONF, PETERA_CONF, [Location of petera server configuration])
 
 AX_CHECK_GNU_MAKE()
 AC_CONFIG_FILES(Makefile peterad.service)
