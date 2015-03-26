@@ -1,5 +1,4 @@
-AM_LDFLAGS = @OPENSSL_LIBS@ @LIBSYSTEMD_LIBS@
-AM_CFLAGS = @OPENSSL_CFLAGS@ @LIBSYSTEMD_CFLAGS@ \
+AM_CFLAGS = \
 	-Wall \
 	-Wextra \
 	-Werror \
@@ -18,6 +17,8 @@ OPENSSL = $(CORE) \
 	src/main.c \
 	src/common.h
 
+peterad_CFLAGS = @OPENSSL_CFLAGS@ @LIBSYSTEMD_CFLAGS@
+peterad_LDADD = @OPENSSL_LIBS@ @LIBSYSTEMD_LIBS@
 peterad_SOURCES = $(OPENSSL) \
 	src/s_ctx.c \
 	src/s_ctx.h \
@@ -25,6 +26,8 @@ peterad_SOURCES = $(OPENSSL) \
 	src/s_decrypt.h \
 	src/s_run.c
 
+petera_CFLAGS = @OPENSSL_CFLAGS@
+petera_LDADD = @OPENSSL_LIBS@
 petera_SOURCES = $(OPENSSL) \
 	src/c_common.c \
 	src/c_common.h \
