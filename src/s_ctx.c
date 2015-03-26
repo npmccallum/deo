@@ -17,6 +17,7 @@
  */
 
 #include "s_ctx.h"
+#include "cleanup_openssl.h"
 
 #include <openssl/err.h>
 

@@ -17,9 +17,9 @@
  */
 
 #include "c_common.h"
-#include "cleanup.h"
-#include "d2i.h"
 #include "common.h"
+#include "asn1.h"
+#include "d2i.h"
 
 #include <openssl/err.h>
 #include <openssl/rand.h>
@@ -40,7 +40,6 @@ seal(const EVP_CIPHER *cipher, const EVP_MD *md, const X509 **certs,
     uint8_t *ekeys[ncerts];
     EVP_PKEY *keys[ncerts];
     int ekeysl[ncerts];
-    AUTO(uint8_t, key);
 
     bool ret = false;
     int ctl = 0;

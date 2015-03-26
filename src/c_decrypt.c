@@ -17,9 +17,9 @@
  */
 
 #include "c_common.h"
-#include "cleanup.h"
-#include "d2i.h"
 #include "common.h"
+#include "asn1.h"
+#include "d2i.h"
 
 #include <openssl/err.h>
 

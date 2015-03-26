@@ -17,7 +17,7 @@
  */
 
 #include "d2i.h"
-#include "cleanup.h"
+#include "cleanup_openssl.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -103,7 +103,7 @@ d2i_bio_max(const ASN1_ITEM *it, BIO *in, void *x, unsigned int max)
             uint8_t *tmp;
 
             blocks = (have + need + BLOCKSIZE - 1) / BLOCKSIZE;
-            tmp = OPENSSL_realloc(buf, blocks * BLOCKSIZE);
+            tmp = realloc(buf, blocks * BLOCKSIZE);
             if (tmp == NULL)
                 return NULL;
 
@@ -143,7 +143,7 @@ d2i_bio_max(const ASN1_ITEM *it, BIO *in, void *x, unsigned int max)
             uint8_t *tmp;
 
             blocks = (have + need + BLOCKSIZE - 1) / BLOCKSIZE;
-            tmp = OPENSSL_realloc(buf, blocks * BLOCKSIZE);
+            tmp = realloc(buf, blocks * BLOCKSIZE);
             if (tmp == NULL)
                 return NULL;
 

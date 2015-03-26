@@ -17,7 +17,7 @@
  */
 
 #include "common.h"
-#include "cleanup.h"
+#include "asn1.h"
 #include "d2i.h"
 
 #include <errno.h>

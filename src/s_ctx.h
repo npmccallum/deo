@@ -20,6 +20,8 @@
 
 #include "cleanup.h"
 
+#include <openssl/x509.h>
+
 typedef struct {
     SSL_CTX *ctx;
     STACK_OF(X509) *crt;

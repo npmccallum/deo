@@ -16,28 +16,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "common.h"
-#include "asn1.h"
-#include "d2i.h"
+#include "cleanup_openssl.h"
 
-#include <errno.h>
-#include <openssl/err.h>
+DEFINE_CLEANUP_STACK(X509_INFO)
+DEFINE_CLEANUP_STACK(X509)
 
-int
-cmd_targets(int argc, const char **argv)
-{
-    AUTO(PETERA_HEADER, hdr);
+DEFINE_CLEANUP(ASN1_OCTET_STRING)
+DEFINE_CLEANUP(EVP_CIPHER_CTX)
+DEFINE_CLEANUP(EVP_PKEY)
+DEFINE_CLEANUP(X509_STORE_CTX)
+DEFINE_CLEANUP(X509_STORE)
+DEFINE_CLEANUP(X509)
+DEFINE_CLEANUP(SSL_CTX)
+DEFINE_CLEANUP(SSL)
 
-    hdr = d2i_fp_max(&PETERA_HEADER_it, stdin, NULL, PETERA_MAX_INPUT);
-    if (hdr == NULL) {
-        ERR_print_errors_fp(stderr);
-        return EXIT_FAILURE;
-    }
+void
+cleanup_BIO(BIO **x) {
+    if (x == NULL) return;
+    BIO_free_all(*x);
+}
 
-    for (int i = 0; i < sk_ASN1_UTF8STRING_num(hdr->targets); i++) {
-        ASN1_UTF8STRING *str = sk_ASN1_UTF8STRING_value(hdr->targets, i);
-        fprintf(stdout, "%*s\n", str->length, str->data);
-    }
-
-    return EXIT_SUCCESS;
+void
+cleanup_BIGNUM(BIGNUM **x) {
+    if (x == NULL) return;
+    BN_free(*x);
 }

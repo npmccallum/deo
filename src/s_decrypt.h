@@ -19,6 +19,7 @@
 #pragma once
 
 #include "s_ctx.h"
+#include "asn1.h"
 
 PETERA_ERR
 decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt);

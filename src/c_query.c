@@ -17,7 +17,7 @@
  */
 
 #include "c_common.h"
-#include "cleanup.h"
+#include "cleanup_openssl.h"
 #include "common.h"
 
 #include <openssl/err.h>

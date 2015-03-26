@@ -18,47 +18,20 @@
 
 #include "cleanup.h"
 #include <unistd.h>
-
-DEFINE_CLEANUP_STACK(X509_INFO)
-DEFINE_CLEANUP_STACK(X509)
-
-DEFINE_CLEANUP(ASN1_OCTET_STRING)
-DEFINE_CLEANUP(EVP_CIPHER_CTX)
-DEFINE_CLEANUP(EVP_PKEY)
-DEFINE_CLEANUP(X509_STORE_CTX)
-DEFINE_CLEANUP(X509_STORE)
-DEFINE_CLEANUP(X509)
-DEFINE_CLEANUP(SSL_CTX)
-DEFINE_CLEANUP(SSL)
-
-void
-cleanup_BIO(BIO **x) {
-    if (x == NULL) return;
-    BIO_free_all(*x);
-}
-
-void
-cleanup_BIGNUM(BIGNUM **x) {
-    if (x == NULL) return;
-    BN_free(*x);
-}
-
-DEFINE_CLEANUP(PETERA_MSG_DEC_REQ)
-DEFINE_CLEANUP(PETERA_MSG)
-DEFINE_CLEANUP(PETERA_HEADER)
+#include <stdlib.h>
 
 void
 cleanup_uint8_t(uint8_t **x)
 {
     if (x == NULL) return;
-    OPENSSL_free(*x);
+    free(*x);
 }
 
 void
 cleanup_char(char **x)
 {
     if (x == NULL) return;
-    OPENSSL_free(*x);
+    free(*x);
 }
 
 void
