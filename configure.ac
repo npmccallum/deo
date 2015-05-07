@@ -12,7 +12,7 @@ AM_PROG_CC_C_O
 PKG_PROG_PKG_CONFIG([0.25])
 PKG_CHECK_MODULES([OPENSSL], [openssl])
 
-PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd])
+PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd], [], [AC_MSG_ERROR([libsystemd/systemd-devel not found])])
 PKG_CHECK_EXISTS([systemd], [], [AC_MSG_ERROR([systemd not found])])
 AC_ARG_WITH([systemdsystemunitdir],
             AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
