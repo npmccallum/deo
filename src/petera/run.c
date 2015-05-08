@@ -37,6 +37,9 @@
 int
 cmd_askpass(int argc, const char **argv);
 
+int
+cmd_cryptsetup(int argc, const char *argv[]);
+
 static int
 parse_options(int *argc, const char **argv[], STACK_OF(X509) *anchors)
 {
@@ -157,7 +160,7 @@ static const struct {
     const char *stdin;
     const char *stdout;
     const char *args;
-    int (*cmd)(int argc, const char **argv);
+    int (*cmd)(int argc, const char *argv[]);
 } COMMANDS[] = {
     { "query",
       "Fetches and verifies a server's encryption certificate chain",
@@ -189,6 +192,12 @@ static const struct {
       "",
       "",
       cmd_askpass },
+    { "cryptsetup",
+      "Enable petera on a LUKS partition",
+      "",
+      "",
+      "<device> <anchor.pem> <target> [...]",
+      cmd_cryptsetup },
     {}
 };
 

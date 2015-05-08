@@ -28,9 +28,10 @@ peterad_SOURCES = \
 	src/peterad/decrypt.h \
 	src/peterad/run.c
 
-petera_CFLAGS = @OPENSSL_CFLAGS@
-petera_LDADD = @OPENSSL_LIBS@ libcore.a
+petera_CFLAGS = @OPENSSL_CFLAGS@ @CRYPTSETUP_CFLAGS@
+petera_LDADD = @OPENSSL_LIBS@ @CRYPTSETUP_LIBS@ libcore.a
 petera_SOURCES = \
+	src/petera/cryptsetup/main.c \
 	src/petera/askpass/askp.c \
 	src/petera/askpass/askp.h \
 	src/petera/askpass/iface.c \
@@ -51,8 +52,7 @@ dist_noinst_DATA = peterad.service.in
 systemdsystemunit_DATA = peterad.socket peterad.service
 
 install-data-local:
-	mkdir -p $(DESTDIR)/$(psysconfdir)/decrypt.d
-	touch $(DESTDIR)/$(psysconfdir)/$(PACKAGE_NAME)d.pem
-	touch $(DESTDIR)/$(psysconfdir)/encrypt.pem
+	mkdir -p $(DESTDIR)/$(PETERAD_CONF)/decrypt.d
+	mkdir -p $(DESTDIR)/$(PETERA_CONF)
 
 @ifGNUmake@ include $(srcdir)/CA.mk
