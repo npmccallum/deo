@@ -16,28 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "cleanup_openssl.h"
+#pragma once
 
-DEFINE_CLEANUP_STACK(X509_INFO)
-DEFINE_CLEANUP_STACK(X509)
+#include <openssl/x509.h>
+#include <stdbool.h>
+#include <stdio.h>
 
-DEFINE_CLEANUP(ASN1_OCTET_STRING)
-DEFINE_CLEANUP(EVP_CIPHER_CTX)
-DEFINE_CLEANUP(EVP_PKEY)
-DEFINE_CLEANUP(X509_STORE_CTX)
-DEFINE_CLEANUP(X509_STORE)
-DEFINE_CLEANUP(X509)
-DEFINE_CLEANUP(SSL_CTX)
-DEFINE_CLEANUP(SSL)
-
-void
-cleanup_BIO(BIO **x) {
-    if (x == NULL) return;
-    BIO_free_all(*x);
-}
-
-void
-cleanup_BIGNUM(BIGNUM **x) {
-    if (x == NULL) return;
-    BN_free(*x);
-}
+bool
+encrypt(const STACK_OF(X509) *anchors, size_t ntargets, const char *targets[],
+        FILE *in, FILE *out);

@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "cleanup_openssl.h"
+#include "cleanup.h"
 
 #include <openssl/asn1t.h>
 #include <openssl/x509.h>
@@ -67,6 +67,7 @@ typedef struct {
 
 typedef struct {
     STACK_OF(ASN1_UTF8STRING) *targets;
+    STACK_OF(X509) *anchors;
     PETERA_MSG_DEC_REQ *req;
     ASN1_OCTET_STRING *iv;
 } PETERA_HEADER;

@@ -18,8 +18,12 @@
 
 #pragma once
 
-#include "s_ctx.h"
-#include "asn1.h"
+#include "../asn1.h"
 
-PETERA_ERR
-decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt);
+#include <openssl/x509.h>
+#include <stdbool.h>
+#include <stdio.h>
+
+bool
+decrypt(const STACK_OF(X509) *anchors, size_t ntargets, const char *targets[],
+        FILE *in, FILE *out);

@@ -16,28 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "common.h"
-#include "asn1.h"
-#include "d2i.h"
+#pragma once
 
-#include <errno.h>
-#include <openssl/err.h>
+#include "../cleanup.h"
 
-int
-cmd_targets(int argc, const char **argv)
-{
-    AUTO(PETERA_HEADER, hdr);
+#include <openssl/x509.h>
 
-    hdr = d2i_fp_max(&PETERA_HEADER_it, stdin, NULL, PETERA_MAX_INPUT);
-    if (hdr == NULL) {
-        ERR_print_errors_fp(stderr);
-        return EXIT_FAILURE;
-    }
+typedef struct {
+    SSL_CTX *ctx;
+    STACK_OF(X509) *crt;
+    STACK_OF(X509_INFO) *dec;
+} ctx;
 
-    for (int i = 0; i < sk_ASN1_UTF8STRING_num(hdr->targets); i++) {
-        ASN1_UTF8STRING *str = sk_ASN1_UTF8STRING_value(hdr->targets, i);
-        fprintf(stdout, "%*s\n", str->length, str->data);
-    }
+void
+ctx_free(ctx *ctx);
 
-    return EXIT_SUCCESS;
-}
+ctx *
+ctx_init(const char *tls, const char *enc, const char *dec);
+
+DECLARE_CLEANUP(ctx);

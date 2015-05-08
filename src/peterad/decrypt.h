@@ -18,15 +18,8 @@
 
 #pragma once
 
-#include <openssl/ssl.h>
+#include "ctx.h"
+#include "../asn1.h"
 
-#include <stdbool.h>
-
-bool
-validate_chain(SSL_CTX *ctx, STACK_OF(X509) *certs);
-
-STACK_OF(X509) *
-fetch_chain(SSL_CTX *ctx, const char *host_port);
-
-SSL_CTX *
-make_ssl_ctx(const char *anchor);
+PETERA_ERR
+decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt);

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "s_decrypt.h"
+#include "decrypt.h"
 
 #include <stdbool.h>
 

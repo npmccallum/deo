@@ -21,12 +21,12 @@ CCA/private/%.pem: CCA/cacert.pem
 	openssl genrsa -out $@ 1024
 
 CCA/csr/%.csr: CCA/private/%.pem
-	openssl req -new -key $< -out $@ -subj "/CN=$(basename $(notdir $@))"
+	openssl req -new -key $< -out $@ -subj "/CN=localhost/O=$(basename $(notdir $@))"
 
 CCA/newcerts/%.pem: CCA/csr/%.csr
 	openssl ca -batch -config CCA/cnf -out $@ -infiles $<
 
-SVC/peterad.pem: CCA/newcerts/localhost.pem CCA/cacert.pem CCA/private/localhost.pem
+SVC/peterad.pem: CCA/newcerts/peterad.pem CCA/cacert.pem CCA/private/peterad.pem
 	mkdir -p SVC
 	cat $^ > $@
 

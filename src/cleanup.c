@@ -56,3 +56,27 @@ cleanup_fd(int *fd)
 
     close(*fd);
 }
+
+DEFINE_CLEANUP_STACK(X509_INFO)
+DEFINE_CLEANUP_STACK(X509)
+
+DEFINE_CLEANUP(ASN1_OCTET_STRING)
+DEFINE_CLEANUP(EVP_CIPHER_CTX)
+DEFINE_CLEANUP(EVP_PKEY)
+DEFINE_CLEANUP(X509_STORE_CTX)
+DEFINE_CLEANUP(X509_STORE)
+DEFINE_CLEANUP(X509)
+DEFINE_CLEANUP(SSL_CTX)
+DEFINE_CLEANUP(SSL)
+
+void
+cleanup_BIO(BIO **x) {
+    if (x == NULL) return;
+    BIO_free_all(*x);
+}
+
+void
+cleanup_BIGNUM(BIGNUM **x) {
+    if (x == NULL) return;
+    BN_free(*x);
+}

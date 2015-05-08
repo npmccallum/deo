@@ -17,7 +17,7 @@
  */
 
 #include "d2i.h"
-#include "cleanup_openssl.h"
+#include "cleanup.h"
 
 #include <stdbool.h>
 #include <stdint.h>

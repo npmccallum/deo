@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "s_ctx.h"
-#include "cleanup_openssl.h"
+#include "ctx.h"
+#include "../cleanup.h"
 
 #include <openssl/err.h>
 
