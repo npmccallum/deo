@@ -34,6 +34,9 @@
 #include "encrypt.h"
 #include "decrypt.h"
 
+int
+cmd_askpass(int argc, const char **argv);
+
 static int
 parse_options(int *argc, const char **argv[], STACK_OF(X509) *anchors)
 {
@@ -180,6 +183,12 @@ static const struct {
       "List of targets",
       "",
       cmd_targets },
+    { "askpass",
+      "Daemon which listens on the systemd askpass interface",
+      "",
+      "",
+      "",
+      cmd_askpass },
     {}
 };
 

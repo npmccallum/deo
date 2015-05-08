@@ -31,6 +31,14 @@ peterad_SOURCES = \
 petera_CFLAGS = @OPENSSL_CFLAGS@
 petera_LDADD = @OPENSSL_LIBS@ libcore.a
 petera_SOURCES = \
+	src/petera/askpass/askp.c \
+	src/petera/askpass/askp.h \
+	src/petera/askpass/iface.c \
+	src/petera/askpass/iface.h \
+	src/petera/askpass/list.c \
+	src/petera/askpass/list.h \
+	src/petera/askpass/main.c \
+	src/petera/askpass/main.h \
 	src/petera/query.c \
 	src/petera/query.h \
 	src/petera/encrypt.c \
