@@ -2,7 +2,7 @@
 Description=peterad socket
 
 [Socket]
-ListenStream=5700
+ListenStream=@PETERA_SOCKET@
 
 [Install]
 WantedBy=multi-user.target

@@ -21,6 +21,9 @@ AC_ARG_WITH([systemdsystemunitdir],
             [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
 AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
 
+AC_SUBST([PETERA_SOCKET], [5700])
+AX_DEFINE_DIR(PETERA_SOCKET, PETERA_SOCKET, [Default petera socket])
+
 AC_SUBST([PETERAD_BINARY], [${bindir}/${PACKAGE_NAME}d${EXEEXT}])
 AC_SUBST([PETERAD_CONF], [${sysconfdir}/${PACKAGE_NAME}d])
 AX_DEFINE_DIR(PETERAD_BINARY, PETERAD_BINARY, [Location of peterad binary])
@@ -32,6 +35,6 @@ AX_DEFINE_DIR(PETERA_BINARY, PETERA_BINARY, [Location of petera binary])
 AX_DEFINE_DIR(PETERA_CONF, PETERA_CONF, [Location of petera keys])
 
 AX_CHECK_GNU_MAKE()
-AC_CONFIG_FILES(Makefile peterad.service)
+AC_CONFIG_FILES(Makefile peterad.service peterad.socket)
 AC_OUTPUT
 

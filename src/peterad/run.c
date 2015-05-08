@@ -96,7 +96,7 @@ on_signal(int sig)
 int
 run(int argc, char **argv)
 {
-    char *hp = PETERA_DEF_PORT;
+    char *hp = PETERA_SOCKET;
     int ret = EXIT_FAILURE;
     AUTO(ctx, ctx);
     int lfds = 0;

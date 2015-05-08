@@ -122,7 +122,7 @@ request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
     if (io == NULL)
         return NULL;
 
-    BIO_set_conn_port(io, PETERA_DEF_PORT);
+    BIO_set_conn_port(io, PETERA_SOCKET);
     BIO_set_ssl_mode(io, SSL_MODE_AUTO_RETRY);
     if (BIO_set_conn_hostname(io, trgt) <= 0)
         return NULL;

@@ -18,5 +18,4 @@
 
 #pragma once
 
-#define PETERA_DEF_PORT "5700"
 #define PETERA_MAX_INPUT (1024 * 512)
