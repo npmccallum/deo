@@ -16,8 +16,7 @@ libcore_a_SOURCES = \
 	src/cleanup.h \
 	src/d2i.c \
 	src/d2i.h \
-	src/main.c \
-	src/common.h
+	src/main.c
 
 peterad_CFLAGS = @OPENSSL_CFLAGS@ @LIBSYSTEMD_CFLAGS@
 peterad_LDADD = @OPENSSL_LIBS@ @LIBSYSTEMD_LIBS@ libcore.a

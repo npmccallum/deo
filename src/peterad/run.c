@@ -19,7 +19,6 @@
 #define _GNU_SOURCE
 #include "decrypt.h"
 #include "../d2i.h"
-#include "../main.h"
 
 #include <openssl/err.h>
 #include <systemd/sd-daemon.h>

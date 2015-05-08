@@ -17,7 +17,6 @@
  */
 
 #include "../cleanup.h"
-#include "../main.h"
 #include "../d2i.h"
 
 #include <openssl/err.h>

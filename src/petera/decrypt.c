@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../main.h"
 #include "../d2i.h"
 #include "query.h"
 

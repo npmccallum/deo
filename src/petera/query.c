@@ -17,7 +17,6 @@
  */
 
 #include "query.h"
-#include "../main.h"
 
 #include <openssl/err.h>
 

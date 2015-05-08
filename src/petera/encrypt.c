@@ -18,7 +18,6 @@
 
 #include "encrypt.h"
 #include "query.h"
-#include "../main.h"
 #include "../asn1.h"
 #include "../d2i.h"
 
