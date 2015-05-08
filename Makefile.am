@@ -47,7 +47,7 @@ petera_SOURCES = \
 	src/petera/decrypt.h \
 	src/petera/run.c
 
-dist_noinst_DATA = peterad.service.in peterad.socket.in
+dist_noinst_DATA = CA.mk peterad.service.in peterad.socket.in
 systemdsystemunit_DATA = peterad.socket peterad.service
 
 install-data-local:
