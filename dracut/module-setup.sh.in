@@ -1,0 +1,46 @@
+#!/bin/bash
+
+check() {
+    # If no petera disk keys are installed,
+    # only install petera on demand
+    for i in @PETERA_CONF@/disks.d/*; do
+        [ -e "$i" ] || return 255
+    done
+
+    # If petera is not installed,
+    # then we cannot support it
+    require_binaries petera \
+    	@PETERA_PLUGINS@/askpassd.so \
+    	@PETERA_PLUGINS@/decrypt.so \
+    	|| return 1
+
+    return 0
+}
+
+depends() {
+    echo crypt systemd
+    return 0
+}
+
+cmdline() {
+    echo "rd.neednet"
+}
+
+install() {
+    if ! dracut_module_included "systemd"; then
+        derror "petera needs systemd in the initramfs"
+        return 1
+    fi
+
+    inst_multiple petera \
+        @PETERA_PLUGINS@/askpassd.so \
+        @PETERA_PLUGINS@/decrypt.so \
+        @PETERA_CONF@/disks.d
+
+    inst_simple "$moddir/petera-askpassd.service" \
+        "$systemdsystemunitdir/petera-askpassd.service"
+    ln_r  "$systemdsystemunitdir/petera-askpassd.service" \
+        "$systemdsystemunitdir/basic.target.wants/petera-askpassd.service"
+
+    dracut_need_initqueue
+}

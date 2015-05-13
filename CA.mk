@@ -33,3 +33,5 @@ SVC/decryptd.pem: CCA/newcerts/decryptd.pem CCA/cacert.pem CCA/private/decryptd.
 SVC/enc/enc.pem: CCA/newcerts/enc.pem CCA/cacert.pem CCA/private/enc.pem
 	mkdir -p SVC/enc 
 	cat $^ > $@
+
+CLEANFILES += PCA CCA SVC

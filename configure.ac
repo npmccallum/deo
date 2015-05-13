@@ -14,6 +14,10 @@ AM_PROG_CC_C_O
 LT_INIT([disable-static])
 LT_SYS_MODULE_EXT
 
+AC_CHECK_FILE([/usr/lib/dracut/modules.d],
+              [AC_SUBST([dracutdir], [/usr/lib/dracut/modules.d/60petera])],
+              [AC_MSG_ERROR(not found)])
+
 PKG_PROG_PKG_CONFIG([0.25])
 
 PKG_CHECK_MODULES([OPENSSL], [openssl])
