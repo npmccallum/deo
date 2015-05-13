@@ -9,13 +9,13 @@ systemdsystemunit_DATA = \
 	petera-askpassd.service
 
 %.service: %.service.in
-	$(AM_V_GEN)sed \
+	$(AM_V_GEN)$(SED) \
 		-e 's,@bindir\@,$(bindir),g' \
 		-e 's,@PETERA_CONF\@,$(PETERA_CONF),g' \
 		$< > $@
 
 %.socket: %.socket.in
-	$(AM_V_GEN)sed \
+	$(AM_V_GEN)$(SED) \
 		-e 's,@bindir\@,$(bindir),g' \
 		-e 's,@PETERA_SOCKET\@,$(PETERA_SOCKET),g' \
 		$< > $@

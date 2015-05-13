@@ -38,6 +38,6 @@ askpassd_la_SOURCES = \
 	askpassd/main.h
 
 install-data-hook:
-	mkdir -p $(DESTDIR)/$(PETERA_CONF)/decrypt.d
-	mkdir -p $(DESTDIR)/$(PETERA_CONF)/disks.d
+	$(MKDIR_P) $(DESTDIR)/$(PETERA_CONF)/decrypt.d
+	$(MKDIR_P) $(DESTDIR)/$(PETERA_CONF)/disks.d
 	rm -f $(DESTDIR)/$(plugindir)/*.la
