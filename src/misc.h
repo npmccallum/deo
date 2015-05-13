@@ -18,24 +18,19 @@
 
 #pragma once
 
-#include "../asn1.h"
+#include "asn1.h"
 #include <stdbool.h>
 
-/* Loads all certificates from the file and adds them to certs.
- * If anchors != NULL, validation is performed.
- * If anchors is empty, the default system anchors are used. */
+/* Validates the certificate chain using the specified trust anchors.
+ * If anchors is NULL or empty, the default system trust store is used. */
 bool
-load(const STACK_OF(X509) *anchors, FILE *fp, STACK_OF(X509) *certs);
+petera_validate(const STACK_OF(X509) *anchors, STACK_OF(X509) *chain);
 
-/* Sends a request to the server and receives the response.
- * Validation is always performed. If anchors == NULL, the call fails.
- * If anchors is empty, the default system anchors are used. */
+/* Loads all certificates from the file and adds them to certs. */
+bool
+petera_load(FILE *fp, STACK_OF(X509) *certs);
+
+/* Sends a request to the server and receives the response. */
 PETERA_MSG *
-request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
-        const PETERA_MSG *req);
-
-/* Resolves a target name to a certificate chain.
- * Trust semantics follow request() above. */
-bool
-query(const STACK_OF(X509) *anchors, const char *target,
-      STACK_OF(X509) *certs);
+petera_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
+               const PETERA_MSG *req);

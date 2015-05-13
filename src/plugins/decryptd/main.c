@@ -18,7 +18,8 @@
 
 #define _GNU_SOURCE
 #include "decrypt.h"
-#include "../d2i.h"
+#include "../../d2i.h"
+#include "../../main.h"
 
 #include <openssl/err.h>
 #include <systemd/sd-daemon.h>
@@ -92,10 +93,10 @@ on_signal(int sig)
 {
 }
 
-int
-run(int argc, char **argv)
+static int
+decryptd(int argc, char *argv[])
 {
-    char *hp = PETERA_SOCKET;
+    const char *hp = PETERA_SOCKET;
     int ret = EXIT_FAILURE;
     AUTO(ctx, ctx);
     int lfds = 0;
@@ -107,28 +108,33 @@ run(int argc, char **argv)
     signal(SIGUSR1, on_signal);
     signal(SIGUSR2, on_signal);
 
-    if (argc >= 4) {
-        ctx = ctx_init(argv[1], argv[2], argv[3]);
+    SSL_load_error_strings();
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+
+    if (argc >= 5) {
+        ctx = ctx_init(argv[2], argv[3], argv[4]);
         if (ctx == NULL)
             ERR_print_errors_fp(stderr);
 
-        if (argc >= 5)
-            hp = argv[4];
+        if (argc >= 6)
+            hp = argv[5];
     }
 
     if (ctx == NULL) {
         fprintf(
             stderr,
-            "Usage: %s <tls_file> <enc_chain> <dec_dir> [<[host:]port>]\n",
-            argv[0]
+            "Usage: %s %s <tls_file> <enc_file> <dec_dir> [<[host:]port>]\n",
+            argv[0], argv[1]
         );
 
-        return 1;
+        EVP_cleanup();
+        return EXIT_FAILURE;
     }
 
     lfds = sd_listen_fds(0);
     if (lfds <= 0) {
-        sock = BIO_get_accept_socket(hp, 0);
+        sock = BIO_get_accept_socket((char *) hp, 0);
         if (sock < 0) {
             ERR_print_errors_fp(stderr);
             goto error;
@@ -187,5 +193,9 @@ run(int argc, char **argv)
 error:
     if (ret != EXIT_SUCCESS)
         ERR_print_errors_fp(stderr);
+
+    EVP_cleanup();
     return ret;
 }
+
+petera_plugin petera = { decryptd, NULL };

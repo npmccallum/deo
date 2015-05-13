@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../cleanup.h"
+#include "../main.h"
 
 #include <libcryptsetup.h>
 
@@ -54,15 +54,15 @@ generate_key(uint8_t *key, size_t size, char *hexkey)
     if (fread(key, 1, size, file) != size)
         return -errno;
 
-    for (int i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
         snprintf(&hexkey[i * 2], 3, "%02X", key[i]);
 
     return 0;
 }
 
 static int
-make_keyfile(crypt_device *cd, const uint8_t *rand, size_t size,
-             int argc, char **argv)
+make_keyfile(const char *binary, crypt_device *cd, const uint8_t *rand,
+             size_t size, int argc, char *argv[])
 {
     const char *uuid = NULL;
     char keyfile[PATH_MAX];
@@ -76,8 +76,8 @@ make_keyfile(crypt_device *cd, const uint8_t *rand, size_t size,
     if (uuid == NULL)
         return -EINVAL;
 
-    if (snprintf(keyfile, sizeof(keyfile), "%s/%s", PETERA_CONF, uuid)
-            < strlen(PETERA_CONF) + strlen(uuid) + 1)
+    if (snprintf(keyfile, sizeof(keyfile), "%s/disks.d/%s", PETERA_CONF, uuid)
+            < (int) (strlen(PETERA_CONF) + strlen(uuid) + 1))
         return -ENAMETOOLONG;
 
     fd = open(keyfile, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
@@ -93,7 +93,7 @@ make_keyfile(crypt_device *cd, const uint8_t *rand, size_t size,
         close(in[1]);
         return -errno;
     } else if (pid == 0) {
-        char *args[argc + 3];
+        const char *args[argc + 3];
 
         close(in[1]);
 
@@ -103,13 +103,13 @@ make_keyfile(crypt_device *cd, const uint8_t *rand, size_t size,
         if (dup2(fd, STDOUT_FILENO) < 0)
             exit(1);
 
-        args[0] = PETERA_BINARY;
+        args[0] = binary;
         args[1] = "encrypt";
-        for (size_t i = 0; i < argc; i++)
+        for (int i = 0; i < argc; i++)
             args[i + 2] = argv[i];
         args[argc + 2] = NULL;
 
-        execv(PETERA_BINARY, args);
+        execv(binary, (char **) args);
         exit(1);
     }
 
@@ -121,15 +121,17 @@ make_keyfile(crypt_device *cd, const uint8_t *rand, size_t size,
     if (waitpid(pid, &status, 0) != pid)
         return -errno;
 
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 0 && written == size)
+    if (WIFEXITED(status)
+        && WEXITSTATUS(status) == 0
+        && written == (ssize_t) size)
         return 0;
 
     unlink(keyfile);
     return -EPIPE;
 }
 
-int
-cmd_cryptsetup(int argc, char **argv)
+static int
+cryptsetup(int argc, char *argv[])
 {
     AUTO(crypt_device, cd);
     const char *type = NULL;
@@ -170,7 +172,7 @@ cmd_cryptsetup(int argc, char **argv)
     if (slot < 0)
         error(1, -slot, "Unable to add passphrase");
 
-    nerr = make_keyfile(cd, key, sizeof(key), argc - 3, &argv[3]);
+    nerr = make_keyfile(argv[0], cd, key, sizeof(key), argc - 3, &argv[3]);
     if (nerr != 0) {
         crypt_keyslot_destroy(cd, slot);
         error(1, -nerr, "Unable to make keyfile");
@@ -178,3 +180,7 @@ cmd_cryptsetup(int argc, char **argv)
 
     return 0;
 }
+
+petera_plugin petera = {
+    cryptsetup, "Enable petera on a LUKS partition"
+};

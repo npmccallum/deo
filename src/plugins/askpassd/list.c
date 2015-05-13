@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../askpass/list.h"
+#include "list.h"
 
 void
 list_add_after(struct list *list, struct list *item)

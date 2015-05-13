@@ -18,6 +18,7 @@
 
 #define _GNU_SOURCE
 #include "../../cleanup.h"
+#include "../main.h"
 #include "askp.h"
 #include "iface.h"
 #include "list.h"
@@ -36,24 +37,57 @@ on_signal(int sig)
 {
 }
 
-int
-cmd_askpass(int argc, const char *argv[])
+static int
+askpass(int argc, char *argv[])
 {
     struct iface *iface = NULL;
+    const char *keydir = NULL;
     struct askp *askp = NULL;
-    struct pollfd fds[2];
-    struct stat st;
     int ret = EXIT_FAILURE;
+    char *dargs[argc + 1];
+    struct pollfd fds[2];
+    size_t dcnt = 0;
+    struct stat st;
     LIST(keys);
 
-    if (argc != 3)
-        return EINVAL;
+    if (argc > 2) {
+        memset(dargs, 0, sizeof(dargs));
+        dargs[dcnt++] = argv[0];
+        dargs[dcnt++] = "encrypt";
+
+        optind = 2;
+        for (int c; (c = getopt(argc, argv, "k:a:")) != -1; ) {
+            AUTO(FILE, file);
+
+            switch (c) {
+            case 'k':
+                keydir = optarg;
+                break;
+
+            case 'a':
+                dargs[dcnt++] = "-a";
+                dargs[dcnt++] = optarg;
+                break;
+
+            default:
+                error(EXIT_FAILURE, 0, "Invalid option: %c", c);
+            }
+        }
+
+        for (int i = optind; i < argc; i++)
+            dargs[dcnt++] = argv[i];
+    }
+
+    if (keydir == NULL)
+        error(EXIT_FAILURE, 0,
+              "Usage: %s %s [-k <keydir> | -a <anchor>] [<target> ...]",
+              argv[0], argv[1]);
 
     if (access(argv[0], X_OK) != 0)
         error(EXIT_FAILURE, errno, "Unable to execute binary");
 
-    if (access(argv[2], R_OK) != 0
-        || stat(argv[2], &st) != 0
+    if (access(keydir, R_OK) != 0
+        || stat(keydir, &st) != 0
         || !S_ISDIR(st.st_mode))
         error(EXIT_FAILURE, errno, "Unable to access key directory");
 
@@ -76,7 +110,7 @@ cmd_askpass(int argc, const char *argv[])
         }
 
         if (fds[0].revents & fds[0].events) {
-            if (iface_event(iface, argv[0], argv[2], &keys) != 0)
+            if (iface_event(iface, dargs, keydir, &keys) != 0)
                 goto error;
         }
         fds[0].revents = 0;
@@ -101,3 +135,5 @@ error:
     askp_free(askp);
     return ret;
 }
+
+petera_plugin petera = { askpass, NULL };

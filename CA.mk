@@ -26,13 +26,10 @@ CCA/csr/%.csr: CCA/private/%.pem
 CCA/newcerts/%.pem: CCA/csr/%.csr
 	openssl ca -batch -config CCA/cnf -out $@ -infiles $<
 
-SVC/peterad.pem: CCA/newcerts/peterad.pem CCA/cacert.pem CCA/private/peterad.pem
+SVC/decryptd.pem: CCA/newcerts/decryptd.pem CCA/cacert.pem CCA/private/decryptd.pem
 	mkdir -p SVC
 	cat $^ > $@
 
 SVC/enc/enc.pem: CCA/newcerts/enc.pem CCA/cacert.pem CCA/private/enc.pem
 	mkdir -p SVC/enc 
 	cat $^ > $@
-
-clean-local:
-	-rm -rf PCA CCA SVC

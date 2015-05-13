@@ -1,9 +1,0 @@
-[Unit]
-Description=peterad service
-ConditionDirectoryNotEmpty=@PETERA_CONF@/decrypt.d
-ConditionFileNotEmpty=@PETERA_CONF@/@PACKAGE_NAME@d.pem
-ConditionPathExists=@PETERA_CONF@/encrypt.pem
-
-[Service]
-ExecStart=@PETERAD_BINARY@ @PETERA_CONF@/@PACKAGE_NAME@d.pem @PETERA_CONF@/encrypt.pem @PETERA_CONF@/decrypt.d
-StandardError=syslog

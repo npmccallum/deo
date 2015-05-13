@@ -16,16 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "encrypt.h"
-#include "query.h"
-#include "../asn1.h"
-#include "../d2i.h"
+#include "../main.h"
 
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <error.h>
 #include <stdbool.h>
 #include <unistd.h>
 
@@ -95,7 +93,7 @@ make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
     if (dr->cipher == NULL || dr->digest == NULL)
         return false;
 
-    for (size_t i = 0; i < sk_X509_num(certs); i++) {
+    for (int i = 0; i < sk_X509_num(certs); i++) {
         X509 *cert = sk_X509_value(certs, i);
         uint8_t digest[EVP_MAX_MD_SIZE];
         unsigned int dlen;
@@ -160,7 +158,7 @@ make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
     ret = true;
 
 error:
-    for (size_t i = 0; i < sk_X509_num(certs); i++)
+    for (int i = 0; i < sk_X509_num(certs); i++)
         OPENSSL_free(ekeys[i]);
 
     return ret;
@@ -260,7 +258,7 @@ encrypt_body(const PETERA_HEADER *hdr, const uint8_t *key, FILE *in, FILE *out)
 
 static STACK_OF(X509) *
 parse_targets(const STACK_OF(X509) *anchors, size_t ntargets,
-              const char *targets[])
+              char *targets[])
 {
     AUTO_STACK(X509, certs);
 
@@ -268,22 +266,37 @@ parse_targets(const STACK_OF(X509) *anchors, size_t ntargets,
     if (certs == NULL)
         return NULL;
 
-    for (int i = 0; i < ntargets; i++) {
+    for (size_t i = 0; i < ntargets; i++) {
         AUTO_STACK(X509, chain);
         AUTO(FILE, fp);
         X509 *tmp;
 
-        chain = sk_X509_new_null();
-        if (chain == NULL)
-            return NULL;
-
         fp = fopen(targets[i], "r");
         if (fp != NULL) {
-            if (!load(anchors, fp, chain))
+            chain = sk_X509_new_null();
+            if (chain == NULL)
+                return NULL;
+
+            if (!petera_load(fp, chain))
                 return NULL;
         } else {
-            if (!query(anchors, targets[i], chain))
+            AUTO(PETERA_MSG, rep);
+
+            rep = petera_request(anchors, &(ASN1_UTF8STRING) {
+                .data = (uint8_t *) targets[i],
+                .length = strlen(targets[i])
+            }, &(PETERA_MSG) {
+                .type = PETERA_MSG_TYPE_CRT_REQ,
+                .value.crt_req = &(ASN1_NULL) {0}
+            });
+
+            if (rep == NULL || rep->type != PETERA_MSG_TYPE_CRT_REP)
                 return NULL;
+
+            if (!petera_validate(anchors, rep->value.crt_rep))
+                return NULL;
+
+            chain = STEAL(rep->value.crt_rep);
         }
 
         if (sk_X509_num(chain) == 0)
@@ -302,18 +315,42 @@ parse_targets(const STACK_OF(X509) *anchors, size_t ntargets,
     return STEAL(certs);
 }
 
-bool
-encrypt(const STACK_OF(X509) *anchors, size_t ntargets, const char *targets[],
-        FILE *in, FILE *out)
+static int
+encrypt(int argc, char *argv[])
 {
     uint8_t key[EVP_MAX_KEY_LENGTH];
+    AUTO_STACK(X509, anchors);
     AUTO(PETERA_HEADER, hdr);
     AUTO_STACK(X509, certs);
 
-    if (ntargets < 1)
+    anchors = sk_X509_new_null();
+    if (anchors == NULL)
+        error(EXIT_FAILURE, ENOMEM, "Unable to make anchors");
+
+    optind = 2;
+    for (int c; (c = getopt(argc, argv, "a:")) != -1; ) {
+        AUTO(FILE, file);
+
+        switch (c) {
+        case 'a':
+            file = fopen(optarg, "r");
+            if (file == NULL)
+                error(EXIT_FAILURE, errno, "Error opening anchor file");
+
+            if (!petera_load(file, anchors))
+                error(EXIT_FAILURE, 0, "Error parsing anchor file");
+
+            break;
+
+        default:
+            error(EXIT_FAILURE, 0, "Invalid option");
+        }
+    }
+
+    if (argc - optind < 1)
         return EINVAL;
 
-    certs = parse_targets(anchors, ntargets, targets);
+    certs = parse_targets(anchors, argc - optind, &argv[optind]);
     if (certs == NULL)
         return false;
 
@@ -326,3 +363,7 @@ encrypt(const STACK_OF(X509) *anchors, size_t ntargets, const char *targets[],
 
     return encrypt_body(hdr, key, stdin, stdout);
 }
+
+petera_plugin petera = {
+    encrypt, "Encrypts input to all specified targets"
+};

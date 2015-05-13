@@ -16,19 +16,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "../main.h"
 
-#include <poll.h>
-#include "list.h"
+#include <openssl/err.h>
 
-struct iface;
+static int
+targets(int argc, char *argv[])
+{
+    AUTO(PETERA_HEADER, hdr);
 
-int
-iface_new(struct iface **ctx, struct pollfd *fd);
+    hdr = d2i_fp_max(&PETERA_HEADER_it, stdin, NULL, PETERA_MAX_INPUT);
+    if (hdr == NULL) {
+        ERR_print_errors_fp(stderr);
+        return EXIT_FAILURE;
+    }
 
-int
-iface_event(struct iface *ctx, const char *binary, const char *keysdir,
-            struct list *keys);
+    for (int i = 0; i < sk_ASN1_UTF8STRING_num(hdr->targets); i++) {
+        ASN1_UTF8STRING *str = sk_ASN1_UTF8STRING_value(hdr->targets, i);
+        fprintf(stdout, "%*s\n", str->length, str->data);
+    }
 
-void
-iface_free(struct iface *ctx);
+    return EXIT_SUCCESS;
+}
+
+petera_plugin petera = {
+    targets, "Prints the targets for encrypted input"
+};

@@ -350,7 +350,7 @@ askp_process(struct askp *ctx, struct list *keys)
         char buf[key->len * 2 + 2];
 
         buf[0] = '+';
-        for (size_t i = 0; i < key->len; i++)
+        for (ssize_t i = 0; i < key->len; i++)
             snprintf(&buf[i * 2 + 1], 3, "%02X", key->key[i]);
 
         strcpy(addr.sun_path, item->sock);

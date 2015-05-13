@@ -16,33 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../d2i.h"
-#include "query.h"
+#include "../main.h"
 
-bool
-decrypt(const STACK_OF(X509) *anchors, size_t ntargets, const char *targets[],
-        FILE *in, FILE *out)
+#include <errno.h>
+#include <error.h>
+#include <unistd.h>
+
+static PETERA_HEADER *
+parse_header(const STACK_OF(X509) *anchors, size_t ntargets,
+             char *targets[], FILE *in)
 {
-    const EVP_CIPHER *cipher = NULL;
-    AUTO(ASN1_OCTET_STRING, key);
-    AUTO(EVP_CIPHER_CTX, cctx);
     AUTO(PETERA_HEADER, hdr);
-    uint8_t ct[4096];
-    size_t tlen = 0;
 
     hdr = d2i_fp_max(&PETERA_HEADER_it, in, NULL, PETERA_MAX_INPUT);
     if (hdr == NULL)
-        return false;
+        return NULL;
 
     /* Add specified anchors to the embedded anchors. */
     for (int i = sk_X509_num(anchors) - 1; anchors != NULL && i >= 0 ; i--) {
         X509 *cert = X509_dup(sk_X509_value(anchors, i));
         if (cert == NULL)
-            return false;
+            return NULL;
 
         if (sk_X509_unshift(hdr->anchors, cert) <= 0) {
             X509_free(cert);
-            return false;
+            return NULL;
         }
     }
 
@@ -50,34 +48,47 @@ decrypt(const STACK_OF(X509) *anchors, size_t ntargets, const char *targets[],
     for (int i = ntargets - 1; i >= 0; i--) {
         ASN1_UTF8STRING *target = ASN1_UTF8STRING_new();
         if (target == NULL)
-            return false;
+            return NULL;
 
         if (sk_ASN1_UTF8STRING_unshift(hdr->targets, target) <= 0) {
             ASN1_UTF8STRING_free(target);
-            return false;
+            return NULL;
         }
 
         if (ASN1_STRING_set(target, targets[i], strlen(targets[i])) != 1)
-            return false;
+            return NULL;
     }
 
-    /* Decrypt the key. */
-    for (size_t i = 0; i < sk_ASN1_UTF8STRING_num(hdr->targets); i++) {
+    return STEAL(hdr);
+}
+
+static ASN1_OCTET_STRING *
+fetch_key(const PETERA_HEADER *hdr)
+{
+    for (int i = 0; i < sk_ASN1_UTF8STRING_num(hdr->targets); i++) {
         ASN1_UTF8STRING *trgt = sk_ASN1_UTF8STRING_value(hdr->targets, i);
         AUTO(PETERA_MSG, rep);
 
-        rep = request(hdr->anchors, trgt, &(PETERA_MSG) {
+        rep = petera_request(hdr->anchors, trgt, &(PETERA_MSG) {
             .type = PETERA_MSG_TYPE_DEC_REQ,
             .value.dec_req = hdr->req
         });
 
-        if (rep != NULL && rep->type == PETERA_MSG_TYPE_DEC_REP) {
-            key = STEAL(rep->value.dec_rep);
-            break;
-        }
+        if (rep != NULL && rep->type == PETERA_MSG_TYPE_DEC_REP)
+            return STEAL(rep->value.dec_rep);
     }
-    if (key == NULL)
-        return false;
+
+    return NULL;
+}
+
+static bool
+decrypt_body(const PETERA_HEADER *hdr, const ASN1_OCTET_STRING *key,
+             FILE *in, FILE *out)
+{
+    const EVP_CIPHER *cipher = NULL;
+    AUTO(EVP_CIPHER_CTX, cctx);
+    uint8_t ct[4096];
+    size_t tlen = 0;
 
     cipher = EVP_get_cipherbyobj(hdr->req->cipher);
     if (cipher == NULL)
@@ -148,3 +159,49 @@ decrypt(const STACK_OF(X509) *anchors, size_t ntargets, const char *targets[],
 
     return true;
 }
+
+static int
+decrypt(int argc, char *argv[])
+{
+    AUTO(ASN1_OCTET_STRING, key);
+    AUTO_STACK(X509, anchors);
+    AUTO(PETERA_HEADER, hdr);
+
+    anchors = sk_X509_new_null();
+    if (anchors == NULL)
+        return EXIT_FAILURE;
+
+    optind = 2;
+    for (int c; (c = getopt(argc, (char **) argv, "a:")) != -1; ) {
+        AUTO(FILE, file);
+
+        switch (c) {
+        case 'a':
+            file = fopen(optarg, "r");
+            if (file == NULL)
+                error(EXIT_FAILURE, errno, "Error opening anchor file");
+
+            if (!petera_load(file, anchors))
+                error(EXIT_FAILURE, 0, "Error parsing anchor file");
+
+            break;
+
+        default:
+            error(EXIT_FAILURE, 0, "Invalid option");
+        }
+    }
+
+    hdr = parse_header(anchors, argc - optind, &argv[optind], stdin);
+    if (hdr == NULL)
+        error(EXIT_FAILURE, 0, "Unable to parse header");
+
+    key = fetch_key(hdr);
+    if (key == NULL)
+        error(EXIT_FAILURE, 0, "Unable to retrieve key");
+
+    return decrypt_body(hdr, key, stdin, stdout) ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+petera_plugin petera = {
+    decrypt, "Decrypts input using any of the targets"
+};

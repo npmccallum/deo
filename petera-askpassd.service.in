@@ -1,0 +1,10 @@
+[Unit]
+Description=Petera askpass daemon
+ConditionDirectoryNotEmpty=@PETERA_CONF@/disks.d
+
+[Service]
+ExecStart=@bindir@/petera askpassd
+StandardError=syslog
+
+[Install]
+WantedBy=basic.target

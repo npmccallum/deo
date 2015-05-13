@@ -16,14 +16,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "list.h"
+#include <stdint.h>
+#include <unistd.h>
 
-#include "../asn1.h"
+#define UUID_SIZE 36
 
-#include <openssl/x509.h>
-#include <stdbool.h>
-#include <stdio.h>
-
-bool
-decrypt(const STACK_OF(X509) *anchors, size_t ntargets, const char *targets[],
-        FILE *in, FILE *out);
+struct key {
+    struct list list;
+    uint8_t key[256];
+    ssize_t len;
+    char uuid[UUID_SIZE+1];
+};

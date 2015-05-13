@@ -16,14 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
+#include <poll.h>
 #include "list.h"
-#include <stdint.h>
 
-#define UUID_SIZE 36
+struct iface;
 
-struct key {
-    struct list list;
-    uint8_t key[256];
-    size_t len;
-    char uuid[UUID_SIZE+1];
-};
+int
+iface_new(struct iface **ctx, struct pollfd *fd);
+
+int
+iface_event(struct iface *ctx, char *argv[],
+            const char *keysdir, struct list *keys);
+
+void
+iface_free(struct iface *ctx);

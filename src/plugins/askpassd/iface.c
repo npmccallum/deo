@@ -22,18 +22,22 @@
 #include "main.h"
 #include "../../cleanup.h"
 
-#include <errno.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdbool.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 #include <netinet/in.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <signal.h>
 #include <net/if.h>
 
 struct item {
@@ -103,9 +107,67 @@ error:
     return ret;
 }
 
+static ssize_t
+decrypt(char *argv[], const char *keyfile, size_t size, uint8_t *key)
+{
+    ssize_t t = 0;
+    int status;
+    int pfd[2];
+    pid_t pid;
+    int kfd;
+
+    kfd = open(keyfile, O_RDONLY);
+    if (kfd < 0)
+        return -errno;
+
+    if (pipe(pfd) != 0) {
+        close(kfd);
+        return -errno;
+    }
+
+    pid = fork();
+    if (pid < 0) {
+        close(pfd[0]);
+        close(pfd[1]);
+        close(kfd);
+        return -errno;
+    } else if (pid == 0) {
+        close(pfd[0]);
+
+        if (dup2(kfd, STDIN_FILENO) != STDIN_FILENO)
+            exit(errno);
+
+        if (dup2(pfd[1], STDOUT_FILENO) != STDOUT_FILENO)
+            exit(errno);
+
+        execv(argv[0], argv);
+        exit(errno);
+    }
+
+    close(pfd[1]);
+    close(kfd);
+    for (ssize_t r; (r = read(pfd[0], key + t, size - t)) != 0; t += r) {
+        if (r < 0) {
+            int e = errno;
+            close(pfd[0]);
+            return e;
+        }
+    }
+    close(pfd[0]);
+
+    if (waitpid(pid, &status, 0) != pid)
+        return -errno;
+
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        return t;
+
+    return -EPIPE;
+}
+
+
 int
-iface_event(struct iface *ctx, const char *binary, const char *keysdir,
-            struct list *keys)
+iface_event(struct iface *ctx, char *argv[],
+            const char *keysdir, struct list *keys)
 {
     uint8_t buf[4096] align_as(struct nlmsghdr);
     bool havenew = false;
@@ -203,9 +265,7 @@ iface_event(struct iface *ctx, const char *binary, const char *keysdir,
     for (struct dirent *de = readdir(dir); de; de = readdir(dir)) {
         struct key *key = NULL;
         bool already = false;
-        FILE *pipe = NULL;
-        AUTO(char, cmd);
-        int status;
+        char path[PATH_MAX];
 
         if (de->d_type != DT_REG)
             continue;
@@ -222,23 +282,17 @@ iface_event(struct iface *ctx, const char *binary, const char *keysdir,
         if (already)
             continue;
 
-        if (asprintf(&cmd, "%s decrypt < %s/%s",
-                     binary, keysdir, de->d_name) < 0)
+        if (snprintf(path, sizeof(path), "%s/%s", keysdir, de->d_name) < 0)
             continue;
 
         key = calloc(1, sizeof(struct key));
         if (key == NULL)
             continue;
 
-        pipe = popen(cmd, "r");
-        if (pipe == NULL) {
-            free(key);
-            continue;
-        }
-
-        key->len = fread(key->key, 1, sizeof(key->key), pipe);
-        status = pclose(pipe);
-        if (!WIFEXITED(status) || WEXITSTATUS(status) != 0 || key->len == 0) {
+        key->len = decrypt(argv, path, sizeof(key->key), key->key);
+        if (key->len < 0) {
+            fprintf(stderr, "Unable to decrypt key (%s): %s\n",
+                    de->d_name, strerror(-key->len));
             free(key);
             continue;
         }
