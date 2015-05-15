@@ -41,3 +41,26 @@ install-data-hook:
 	$(MKDIR_P) $(DESTDIR)/$(PETERA_CONF)/decrypt.d
 	$(MKDIR_P) $(DESTDIR)/$(PETERA_CONF)/disks.d
 	rm -f $(DESTDIR)/$(plugindir)/*.la
+
+CLEANFILES = $(systemdsystemunit_DATA) $(dracut_SCRIPTS)
+EXTRA_DIST = \
+	decryptd/petera-decryptd.service.in \
+	decryptd/petera-decryptd.socket.in \
+	askpassd/petera-askpassd.path.in \
+	askpassd/petera-askpassd.service.in \
+	askpassd/module-setup.sh.in
+
+dracut_SCRIPTS = askpassd/module-setup.sh
+systemdsystemunit_DATA = \
+	decryptd/petera-decryptd.socket \
+	decryptd/petera-decryptd.service \
+	askpassd/petera-askpassd.path \
+	askpassd/petera-askpassd.service
+
+%: %.in
+	$(AM_V_GEN)$(SED) \
+		-e 's,@bindir\@,$(bindir),g' \
+		-e 's,@PETERA_CONF\@,$(PETERA_CONF),g' \
+		-e 's,@PETERA_SOCKET\@,$(PETERA_SOCKET),g' \
+		-e 's,@PETERA_PLUGINS\@,$(PETERA_PLUGINS),g' \
+		$(srcdir)/$@.in > $@

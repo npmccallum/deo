@@ -1,5 +1,5 @@
 [Unit]
-Description=Petera decryptd socket
+Description=Petera decryption daemon socket
 
 [Socket]
 ListenStream=@PETERA_SOCKET@
