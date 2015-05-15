@@ -34,4 +34,4 @@ SVC/enc/enc.pem: CCA/newcerts/enc.pem CCA/cacert.pem CCA/private/enc.pem
 	mkdir -p SVC/enc 
 	cat $^ > $@
 
-CLEANFILES += PCA CCA SVC
+CLEANALL += PCA CCA SVC

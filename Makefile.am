@@ -2,7 +2,7 @@ SUBDIRS = src
 
 AM_MAKEFLAGS = --no-print-directory
 
-CLEANFILES = $(systemdsystemunit_DATA) $(dracut_DATA) $(dracut_SCRIPTS)
+CLEANALL = $(systemdsystemunit_DATA) $(dracut_DATA) $(dracut_SCRIPTS)
 
 EXTRA_DIST = \
 	CA.mk \
@@ -33,5 +33,8 @@ dracut_SCRIPTS = dracut/module-setup.sh
 		-e 's,@bindir\@,$(bindir),g' \
 		-e 's,@PETERA_SOCKET\@,$(PETERA_SOCKET),g' \
 		$< > $@
+
+clean-local:
+	rm -rf $(CLEANALL)
 
 @ifGNUmake@ include $(srcdir)/CA.mk

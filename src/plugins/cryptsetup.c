@@ -142,7 +142,7 @@ cryptsetup(int argc, char *argv[])
     int nerr = 0;
     int slot = 0;
 
-    if (!petera_getopt(argc, argv, "hk:d:", "a:", NULL, option, &keydir,
+    if (!petera_getopt(argc, argv, "hk:d:", "a:", NULL, NULL, option, &keydir,
                        option, &device, petera_anchors, &anchors)
         || device == NULL || sk_X509_num(anchors) == 0 || argc - optind < 1) {
         fprintf(stderr, "Usage: petera cryptsetup "
