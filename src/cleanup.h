@@ -21,6 +21,7 @@
 #include <dirent.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
