@@ -42,12 +42,19 @@ load_decryption_certs_keys(const char *dirname)
         char path[strlen(dirname) + strlen(de->d_name) + 2];
         AUTO(FILE, file);
 
-        if (de->d_type != DT_REG)
+        if (de->d_type != DT_REG && de->d_type != DT_UNKNOWN)
             continue;
 
         strcpy(path, dirname);
         strcat(path, "/");
         strcat(path, de->d_name);
+
+        if (de->d_type == DT_UNKNOWN) {
+            struct stat sb;
+            if (! (stat(path, &sb) == 0 && S_ISREG(sb.st_mode))) {
+                continue;
+            }
+        }
 
         file = fopen(path, "r");
         if (file == NULL)
