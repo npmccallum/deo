@@ -101,8 +101,8 @@ make_keyfile(crypt_device *cd, const char *keydir, const uint8_t *rand,
         if (dup2(fd, STDOUT_FILENO) < 0)
             exit(1);
 
-        execv(argv[0], argv);
-        exit(1);
+        execvp(argv[0], argv);
+        error(EXIT_FAILURE, errno, "Execution error");
     }
 
     written = write(in[1], rand, size);
