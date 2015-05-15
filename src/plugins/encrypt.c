@@ -337,7 +337,10 @@ encrypt(int argc, char *argv[])
     if (hdr == NULL)
         error(EXIT_FAILURE, ENOMEM, "Error building header");
 
-    return encrypt_body(hdr, key, stdin, stdout);
+    if (!encrypt_body(hdr, key, stdin, stdout))
+        error(EXIT_FAILURE, 0, "Failure encrypting message body");
+
+    return 0;
 }
 
 petera_plugin petera = {
