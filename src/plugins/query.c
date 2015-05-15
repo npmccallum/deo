@@ -31,34 +31,10 @@ query(int argc, char *argv[])
     AUTO(PETERA_MSG, rep);
     AUTO(FILE, fp);
 
-    anchors = sk_X509_new_null();
-    if (anchors == NULL)
-        error(EXIT_FAILURE, ENOMEM, "Unable to make anchors");
-
-    optind = 2;
-    for (int c; (c = getopt(argc, argv, "a:")) != -1; ) {
-        AUTO(FILE, file);
-
-        switch (c) {
-        case 'a':
-            file = fopen(optarg, "r");
-            if (file == NULL)
-                error(EXIT_FAILURE, errno, "Error opening anchor file");
-
-            if (!petera_load(file, anchors))
-                error(EXIT_FAILURE, 0, "Error parsing anchor file");
-
-            break;
-
-        default:
-            error(EXIT_FAILURE, 0, "Invalid option");
-        }
-    }
-
-    if (argc - optind != 1) {
-        fprintf(stderr,
-                "Usage: %s query [-a <anchor(s)> ...] <target>\n",
-                argv[0]);
+    if (!petera_getopt(argc, argv, "ha:", "", NULL, NULL,
+                       petera_anchors, &anchors)
+        || sk_X509_num(anchors) == 0 || argc - optind != 1) {
+        fprintf(stderr, "Usage: petera query -a <anchors> <target>\n");
         return EXIT_FAILURE;
     }
 

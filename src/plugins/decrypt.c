@@ -167,28 +167,13 @@ decrypt(int argc, char *argv[])
     AUTO_STACK(X509, anchors);
     AUTO(PETERA_HEADER, hdr);
 
-    anchors = sk_X509_new_null();
-    if (anchors == NULL)
+    if (!petera_getopt(argc, argv, "ha:", "", NULL, NULL,
+                       petera_anchors, &anchors)) {
+        fprintf(stderr,
+                "Usage: petera decrypt "
+                "[-a <anchors>] [<target> ...] "
+                "< CIPHERTEXT > PLAINTEXT\n");
         return EXIT_FAILURE;
-
-    optind = 2;
-    for (int c; (c = getopt(argc, (char **) argv, "a:")) != -1; ) {
-        AUTO(FILE, file);
-
-        switch (c) {
-        case 'a':
-            file = fopen(optarg, "r");
-            if (file == NULL)
-                error(EXIT_FAILURE, errno, "Error opening anchor file");
-
-            if (!petera_load(file, anchors))
-                error(EXIT_FAILURE, 0, "Error parsing anchor file");
-
-            break;
-
-        default:
-            error(EXIT_FAILURE, 0, "Invalid option");
-        }
     }
 
     hdr = parse_header(anchors, argc - optind, &argv[optind], stdin);

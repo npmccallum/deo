@@ -255,66 +255,6 @@ encrypt_body(const PETERA_HEADER *hdr, const uint8_t *key, FILE *in, FILE *out)
     return fwrite(tag, 1, sizeof(tag), stdout) == sizeof(tag);
 }
 
-
-static STACK_OF(X509) *
-parse_targets(const STACK_OF(X509) *anchors, size_t ntargets,
-              char *targets[])
-{
-    AUTO_STACK(X509, certs);
-
-    certs = sk_X509_new_null();
-    if (certs == NULL)
-        return NULL;
-
-    for (size_t i = 0; i < ntargets; i++) {
-        AUTO_STACK(X509, chain);
-        AUTO(FILE, fp);
-        X509 *tmp;
-
-        fp = fopen(targets[i], "r");
-        if (fp != NULL) {
-            chain = sk_X509_new_null();
-            if (chain == NULL)
-                return NULL;
-
-            if (!petera_load(fp, chain))
-                return NULL;
-        } else {
-            AUTO(PETERA_MSG, rep);
-
-            rep = petera_request(anchors, &(ASN1_UTF8STRING) {
-                .data = (uint8_t *) targets[i],
-                .length = strlen(targets[i])
-            }, &(PETERA_MSG) {
-                .type = PETERA_MSG_TYPE_CRT_REQ,
-                .value.crt_req = &(ASN1_NULL) {0}
-            });
-
-            if (rep == NULL || rep->type != PETERA_MSG_TYPE_CRT_REP)
-                return NULL;
-
-            if (!petera_validate(anchors, rep->value.crt_rep))
-                return NULL;
-
-            chain = STEAL(rep->value.crt_rep);
-        }
-
-        if (sk_X509_num(chain) == 0)
-            return NULL;
-
-        tmp = sk_X509_shift(chain);
-        if (tmp == NULL)
-            return NULL;
-
-        if (sk_X509_push(certs, tmp) <= 0) {
-            X509_free(tmp);
-            return NULL;
-        }
-    }
-
-    return STEAL(certs);
-}
-
 static int
 encrypt(int argc, char *argv[])
 {
@@ -323,43 +263,79 @@ encrypt(int argc, char *argv[])
     AUTO(PETERA_HEADER, hdr);
     AUTO_STACK(X509, certs);
 
-    anchors = sk_X509_new_null();
-    if (anchors == NULL)
-        error(EXIT_FAILURE, ENOMEM, "Unable to make anchors");
+    if (!petera_getopt(argc, argv, "ha:", "", NULL, NULL,
+                       petera_anchors, &anchors)
+        || sk_X509_num(anchors) == 0 || argc - optind < 1) {
+        fprintf(stderr, "Usage: petera encrypt "
+                        "-a <anchors> <target> [...] "
+                        "< PLAINTEXT > CIPHERTEXT\n");
+        return EXIT_FAILURE;
+    }
 
-    optind = 2;
-    for (int c; (c = getopt(argc, argv, "a:")) != -1; ) {
-        AUTO(FILE, file);
+    certs = sk_X509_new_null();
+    if (certs == NULL)
+        error(EXIT_FAILURE, ENOMEM, "Unable to create anchors");
 
-        switch (c) {
-        case 'a':
-            file = fopen(optarg, "r");
-            if (file == NULL)
-                error(EXIT_FAILURE, errno, "Error opening anchor file");
+    for (int i = optind; i < argc; i++) {
+        AUTO_STACK(X509, chain);
+        AUTO(FILE, fp);
+        X509 *tmp;
 
-            if (!petera_load(file, anchors))
-                error(EXIT_FAILURE, 0, "Error parsing anchor file");
+        fp = fopen(argv[i], "r");
+        if (fp != NULL) {
+            chain = sk_X509_new_null();
+            if (chain == NULL)
+                error(EXIT_FAILURE, ENOMEM, "Unable to create anchors chain");
 
-            break;
+            if (!petera_load(fp, chain))
+                error(EXIT_FAILURE, 0, "Unable to load anchors");
+        } else {
+            AUTO(PETERA_MSG, rep);
 
-        default:
-            error(EXIT_FAILURE, 0, "Invalid option");
+            rep = petera_request(anchors, &(ASN1_UTF8STRING) {
+                .data = (uint8_t *) argv[i],
+                .length = strlen(argv[i])
+            }, &(PETERA_MSG) {
+                .type = PETERA_MSG_TYPE_CRT_REQ,
+                .value.crt_req = &(ASN1_NULL) {0}
+            });
+
+            if (rep == NULL)
+                error(EXIT_FAILURE, 0, "Unable to communicate with server");
+
+            switch (rep->type) {
+            case PETERA_MSG_TYPE_CRT_REP:
+                if (!petera_validate(anchors, rep->value.crt_rep))
+                    error(EXIT_FAILURE, 0, "Server returned untrusted certs");
+
+                chain = STEAL(rep->value.crt_rep);
+                break;
+
+            case PETERA_MSG_TYPE_ERR:
+                error(EXIT_FAILURE, ENOMEM, "Server returned: %s",
+                      petera_err_string(ASN1_ENUMERATED_get(rep->value.err)));
+
+            default:
+                error(EXIT_FAILURE, 0, "Received unknown message from server");
+            }
+        }
+
+        if (sk_X509_num(chain) == 0)
+            error(EXIT_FAILURE, 0, "Server returned no certs");
+
+        tmp = sk_X509_shift(chain);
+        if (sk_X509_push(certs, tmp) <= 0) {
+            X509_free(tmp);
+            error(EXIT_FAILURE, ENOMEM, "Unable to add target certificate");
         }
     }
 
-    if (argc - optind < 1)
-        return EINVAL;
-
-    certs = parse_targets(anchors, argc - optind, &argv[optind]);
-    if (certs == NULL)
-        return false;
-
     if (RAND_bytes(key, sizeof(key)) != 1)
-        return false;
+        error(EXIT_FAILURE, ENOMEM, "Unable to generate random key");
 
     hdr = make_header(anchors, certs, key);
     if (hdr == NULL)
-        return EXIT_FAILURE;
+        error(EXIT_FAILURE, ENOMEM, "Error building header");
 
     return encrypt_body(hdr, key, stdin, stdout);
 }

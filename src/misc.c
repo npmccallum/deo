@@ -17,6 +17,7 @@
  */
 
 #include "misc.h"
+#include <unistd.h>
 
 bool
 petera_validate(const STACK_OF(X509) *anchors, STACK_OF(X509) *chain)
@@ -91,21 +92,16 @@ petera_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
     memset(trgt, 0, sizeof(trgt));
     memcpy(trgt, target->data, target->length);
 
-    if (anchors == NULL)
+    if (anchors == NULL || sk_X509_num(anchors) == 0)
         return NULL;
 
     ctx = SSL_CTX_new(TLSv1_2_client_method());
     if (ctx == NULL)
         return NULL;
 
-    if (sk_X509_num(anchors) == 0) {
-        if (X509_STORE_set_default_paths(SSL_CTX_get_cert_store(ctx)) <= 0)
-            return NULL;
-    } else {
-        for (int i = 0; anchors != NULL && i < sk_X509_num(anchors); i++) {
-            X509 *cert = sk_X509_value(anchors, i);
-            X509_STORE_add_cert(SSL_CTX_get_cert_store(ctx), cert);
-        }
+    for (int i = 0; anchors != NULL && i < sk_X509_num(anchors); i++) {
+        X509 *cert = sk_X509_value(anchors, i);
+        X509_STORE_add_cert(SSL_CTX_get_cert_store(ctx), cert);
     }
 
     io = BIO_new_ssl_connect(ctx);
@@ -127,4 +123,102 @@ petera_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
         return NULL;
 
     return ASN1_item_d2i_bio(&PETERA_MSG_it, io, NULL);
+}
+
+bool
+petera_anchors(char c, const char *arg, STACK_OF(X509) **misc)
+{
+    AUTO_STACK(X509, tmp);
+    AUTO(FILE, file);
+
+    if (arg == NULL || misc == NULL)
+        return false;
+
+    file = fopen(arg, "r");
+    if (file == NULL)
+        return false;
+
+    tmp = *misc == NULL ? sk_X509_new_null() : *misc;
+    if (tmp == NULL)
+        return false;
+
+    if (!petera_load(file, tmp))
+        return false;
+
+    if (*misc == NULL)
+        *misc = STEAL(tmp);
+
+    return true;
+}
+
+bool
+petera_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
+{
+    char options[strlen(opt) + strlen(keep) + 1];
+    const int ind = ++optind;
+    char *forget[argc];
+    char *retain[argc];
+    size_t fcnt = 0;
+    size_t rcnt = 0;
+    va_list ap;
+
+    memset(forget, 0, sizeof(forget));
+    memset(retain, 0, sizeof(retain));
+    strcpy(options, opt);
+    strcat(options, keep);
+
+    for (int c; (c = getopt(argc, argv, options)) != -1; ) {
+        const char *k = strchr(keep, c);
+        const char *o = strchr(opt, c);
+        bool found = false;
+
+        if ((k != NULL) == (o != NULL)) {
+            return false;
+        } else if (k != NULL) {
+            retain[rcnt++] = argv[optind - 2];
+            if (k[1] == ':')
+                retain[rcnt++] = argv[optind - 1];
+        } else if (o != NULL) {
+            forget[fcnt++] = argv[optind - 2];
+            if (o[1] == ':')
+                forget[fcnt++] = argv[optind - 1];
+        }
+
+        va_start(ap, keep);
+        for (size_t i = 0; options[i] != '\0' && !found; i++) {
+            petera_parse p;
+            void *m;
+
+            if (i == 0 && strchr("+-", options[i]) != NULL)
+                continue;
+
+            if (options[i] == ':')
+                continue;
+
+            p = va_arg(ap, petera_parse);
+            m = va_arg(ap, void *);
+
+            if (options[i] != c)
+                continue;
+
+            found = true;
+            if (p == NULL)
+                return false;
+
+            if (!p(c, options[1 + 1] == ':' ? optarg : NULL, m))
+                return false;
+        }
+        va_end(ap);
+
+        if (!found)
+            return false;
+    }
+
+    for (size_t i = 0; i < fcnt; i++)
+        argv[ind + i] = forget[i];
+    for (size_t i = 0; i < rcnt; i++)
+        argv[ind + fcnt + i] = retain[i];
+
+    optind -= rcnt;
+    return true;
 }

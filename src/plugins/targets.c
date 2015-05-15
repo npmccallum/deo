@@ -25,6 +25,11 @@ targets(int argc, char *argv[])
 {
     AUTO(PETERA_HEADER, hdr);
 
+    if (!petera_getopt(argc, argv, "h", "", NULL, NULL)) {
+        fprintf(stderr, "Usage: petera targets < ENCDATA > TARGETS\n");
+        return EXIT_FAILURE;
+    }
+
     hdr = d2i_fp_max(&PETERA_HEADER_it, stdin, NULL, PETERA_MAX_INPUT);
     if (hdr == NULL) {
         ERR_print_errors_fp(stderr);

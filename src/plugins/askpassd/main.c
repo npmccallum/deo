@@ -37,51 +37,39 @@ on_signal(int sig)
 {
 }
 
+static bool
+option(char c, const char *arg, const char **misc)
+{
+    *misc = arg;
+    return true;
+}
+
 static int
 askpass(int argc, char *argv[])
 {
+    const char *keydir = PETERA_CONF "/disks.d";
     struct iface *iface = NULL;
-    const char *keydir = NULL;
+    AUTO_STACK(X509, anchors);
     struct askp *askp = NULL;
     int ret = EXIT_FAILURE;
     char *dargs[argc + 1];
     struct pollfd fds[2];
-    size_t dcnt = 0;
     struct stat st;
     LIST(keys);
 
-    if (argc > 2) {
-        memset(dargs, 0, sizeof(dargs));
-        dargs[dcnt++] = argv[0];
-        dargs[dcnt++] = "encrypt";
-
-        optind = 2;
-        for (int c; (c = getopt(argc, argv, "k:a:")) != -1; ) {
-            AUTO(FILE, file);
-
-            switch (c) {
-            case 'k':
-                keydir = optarg;
-                break;
-
-            case 'a':
-                dargs[dcnt++] = "-a";
-                dargs[dcnt++] = optarg;
-                break;
-
-            default:
-                error(EXIT_FAILURE, 0, "Invalid option: %c", c);
-            }
-        }
-
-        for (int i = optind; i < argc; i++)
-            dargs[dcnt++] = argv[i];
+    if (!petera_getopt(argc, argv, "hk:", "a:", NULL, NULL,
+                       option, &keydir, petera_anchors, &anchors)) {
+        fprintf(stderr,
+                "Usage: petera askpassd "
+                "[-k <keydir>] [-a <anchors>] "
+                "[<target> ...]\n");
+        return EXIT_FAILURE;
     }
 
-    if (keydir == NULL)
-        error(EXIT_FAILURE, 0,
-              "Usage: %s %s [-k <keydir> | -a <anchor>] [<target> ...]",
-              argv[0], argv[1]);
+    memset(dargs, 0, sizeof(dargs));
+    dargs[0] = argv[0];
+    dargs[1] = "decrypt";
+    memcpy(&dargs[2], &argv[optind], (argc - optind) * sizeof(char *));
 
     if (access(argv[0], X_OK) != 0)
         error(EXIT_FAILURE, errno, "Unable to execute binary");

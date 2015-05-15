@@ -93,10 +93,21 @@ on_signal(int sig)
 {
 }
 
+
+static bool
+option(char c, const char *arg, const char **misc)
+{
+    *misc = arg;
+    return true;
+}
+
 static int
 decryptd(int argc, char *argv[])
 {
     const char *hp = PETERA_SOCKET;
+    const char *tlsfile = NULL;
+    const char *encfile = NULL;
+    const char *decdir = NULL;
     int ret = EXIT_FAILURE;
     AUTO(ctx, ctx);
     int lfds = 0;
@@ -108,27 +119,15 @@ decryptd(int argc, char *argv[])
     signal(SIGUSR1, on_signal);
     signal(SIGUSR2, on_signal);
 
-    SSL_load_error_strings();
-    SSL_library_init();
-    OpenSSL_add_all_algorithms();
-
-    if (argc >= 5) {
-        ctx = ctx_init(argv[2], argv[3], argv[4]);
-        if (ctx == NULL)
-            ERR_print_errors_fp(stderr);
-
-        if (argc >= 6)
-            hp = argv[5];
-    }
-
-    if (ctx == NULL) {
-        fprintf(
-            stderr,
-            "Usage: %s %s <tls_file> <enc_file> <dec_dir> [<[host:]port>]\n",
-            argv[0], argv[1]
-        );
-
-        EVP_cleanup();
+    if (!petera_getopt(argc, argv, "ht:e:d:l:", "", NULL, NULL,
+                       option, &tlsfile, option, &encfile,
+                       option, &decdir, option, &hp)
+        || tlsfile == NULL || encfile == NULL || decdir == NULL
+        || (ctx = ctx_init(tlsfile, encfile, decdir)) == NULL) {
+        ERR_print_errors_fp(stderr);
+        fprintf(stderr, "Usage: petera decryptd "
+                        "[-l <[host:]port>] -t <tlsfile> "
+                        "-e <encfile> -d <decdir>\n");
         return EXIT_FAILURE;
     }
 
@@ -194,7 +193,6 @@ error:
     if (ret != EXIT_SUCCESS)
         ERR_print_errors_fp(stderr);
 
-    EVP_cleanup();
     return ret;
 }
 

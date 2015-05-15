@@ -61,8 +61,8 @@ generate_key(uint8_t *key, size_t size, char *hexkey)
 }
 
 static int
-make_keyfile(const char *binary, crypt_device *cd, const uint8_t *rand,
-             size_t size, int argc, char *argv[])
+make_keyfile(crypt_device *cd, const char *keydir, const uint8_t *rand,
+             size_t size, char *argv[])
 {
     const char *uuid = NULL;
     char keyfile[PATH_MAX];
@@ -76,8 +76,8 @@ make_keyfile(const char *binary, crypt_device *cd, const uint8_t *rand,
     if (uuid == NULL)
         return -EINVAL;
 
-    if (snprintf(keyfile, sizeof(keyfile), "%s/disks.d/%s", PETERA_CONF, uuid)
-            < (int) (strlen(PETERA_CONF) + strlen(uuid) + 1))
+    status = snprintf(keyfile, sizeof(keyfile), "%s/%s", keydir, uuid);
+    if (status < 0 || status == sizeof(keyfile))
         return -ENAMETOOLONG;
 
     fd = open(keyfile, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
@@ -93,8 +93,6 @@ make_keyfile(const char *binary, crypt_device *cd, const uint8_t *rand,
         close(in[1]);
         return -errno;
     } else if (pid == 0) {
-        const char *args[argc + 3];
-
         close(in[1]);
 
         if (dup2(in[0], STDIN_FILENO) < 0)
@@ -103,13 +101,7 @@ make_keyfile(const char *binary, crypt_device *cd, const uint8_t *rand,
         if (dup2(fd, STDOUT_FILENO) < 0)
             exit(1);
 
-        args[0] = binary;
-        args[1] = "encrypt";
-        for (int i = 0; i < argc; i++)
-            args[i + 2] = argv[i];
-        args[argc + 2] = NULL;
-
-        execv(binary, (char **) args);
+        execv(argv[0], argv);
         exit(1);
     }
 
@@ -130,31 +122,53 @@ make_keyfile(const char *binary, crypt_device *cd, const uint8_t *rand,
     return -EPIPE;
 }
 
+static bool
+option(char c, const char *arg, const char **misc)
+{
+    *misc = arg;
+    return true;
+}
+
 static int
 cryptsetup(int argc, char *argv[])
 {
-    AUTO(crypt_device, cd);
+    const char *keydir = PETERA_CONF "/disks.d";
+    const char *device = NULL;
+    AUTO_STACK(X509, anchors);
     const char *type = NULL;
+    AUTO(crypt_device, cd);
+    char *eargs[argc + 1];
     int keysize = 0;
     int nerr = 0;
     int slot = 0;
 
-    if (argc < 5)
-        return EINVAL;
+    if (!petera_getopt(argc, argv, "hk:d:", "a:", NULL, option, &keydir,
+                       option, &device, petera_anchors, &anchors)
+        || device == NULL || sk_X509_num(anchors) == 0 || argc - optind < 1) {
+        fprintf(stderr, "Usage: petera cryptsetup "
+                        "[-k <keydir>] -d <device> "
+                        "-a <anchors> <target> [...]\n");
+        return EXIT_FAILURE;
+    }
 
-    nerr = crypt_init(&cd, argv[2]);
+    memset(eargs, 0, sizeof(eargs));
+    eargs[0] = argv[0];
+    eargs[1] = "encrypt";
+    memcpy(&eargs[2], &argv[optind], (argc - optind) * sizeof(char *));
+
+    nerr = crypt_init(&cd, device);
     if (nerr != 0)
-        error(1, -nerr, "Unable to open device (%s)", argv[2]);
+        error(1, -nerr, "Unable to open device (%s)", device);
 
     nerr = crypt_load(cd, NULL, NULL);
     if (nerr != 0)
-        error(1, -nerr, "Unable to load device (%s)", argv[2]);
+        error(1, -nerr, "Unable to load device (%s)", device);
 
     type = crypt_get_type(cd);
     if (type == NULL)
         error(1, 0, "Unable to determine device type");
     if (strcmp(type, CRYPT_LUKS1) != 0)
-        error(1, 0, "%s (%s) is not a LUKS device", argv[2], type);
+        error(1, 0, "%s (%s) is not a LUKS device", device, type);
 
     keysize = crypt_get_volume_key_size(cd);
     if (keysize < 16) /* Less than 128-bits. */
@@ -172,7 +186,7 @@ cryptsetup(int argc, char *argv[])
     if (slot < 0)
         error(1, -slot, "Unable to add passphrase");
 
-    nerr = make_keyfile(argv[0], cd, key, sizeof(key), argc - 3, &argv[3]);
+    nerr = make_keyfile(cd, keydir, key, sizeof(key), eargs);
     if (nerr != 0) {
         crypt_keyslot_destroy(cd, slot);
         error(1, -nerr, "Unable to make keyfile");

@@ -21,6 +21,9 @@
 #include "asn1.h"
 #include <stdbool.h>
 
+/* Callback signature for petera_getopt(). Return false on an error. */
+typedef bool (*petera_parse)(char c, const char *arg, void *misc);
+
 /* Validates the certificate chain using the specified trust anchors.
  * If anchors is NULL or empty, the default system trust store is used. */
 bool
@@ -34,3 +37,27 @@ petera_load(FILE *fp, STACK_OF(X509) *certs);
 PETERA_MSG *
 petera_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
                const PETERA_MSG *req);
+
+/* Callback function for petera_getopt() for parsing anchor arguments. */
+bool
+petera_anchors(char c, const char *arg, STACK_OF(X509) **misc);
+
+/* Implement consistent getopt style parsing.
+ *
+ * This function works like getopt(), and even uses getopt() internally.
+ * A few differences are worth noting.
+ *
+ * First, options specified in both opt and keep are processed. However,
+ * the options listed in keep are moved to the end of the argv array after
+ * optind.
+ *
+ * Second, option processing is done via callbacks. This is done similar to
+ * printf. Each option specified (in either opt or keep) requires two
+ * variable arguments. The first is a pointer to a callback function with the
+ * signature of petera_parse. The second is a misc value to pass to the
+ * callback. If the first variable argument for an option is NULL, no
+ * callback will be called. In this case, if the option specified is provided
+ * the function will return false;
+ */
+bool
+petera_getopt(int argc, char **argv, const char *opt, const char *keep, ...);
