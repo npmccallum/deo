@@ -61,3 +61,11 @@ petera_anchors(char c, const char *arg, STACK_OF(X509) **misc);
  */
 bool
 petera_getopt(int argc, char **argv, const char *opt, const char *keep, ...);
+
+/* Runs a command with the specified stdin and stdout. Returns errno. */
+int
+petera_run(char *argv[], int in, int out);
+
+/* Exactly like pipe(), just a different signature. */
+int
+petera_pipe(int *rend, int *wend);

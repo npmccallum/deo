@@ -17,6 +17,10 @@
  */
 
 #include "misc.h"
+
+#include <sys/wait.h>
+#include <errno.h>
+#include <error.h>
 #include <unistd.h>
 
 bool
@@ -221,4 +225,51 @@ petera_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
 
     optind -= rcnt;
     return true;
+}
+
+int
+petera_run(char *argv[], int in, int out)
+{
+    char path[PATH_MAX];
+    int status = 0;
+    pid_t pid;
+
+    strncpy(path, argv[0], sizeof(path));
+    if (strchr(argv[0], '/') != NULL) {
+        if (realpath(argv[0], path) == NULL)
+            return errno;
+    }
+
+    pid = fork();
+    if (pid < 0)
+        return errno;
+
+    if (pid == 0) {
+        if (dup2(in, STDIN_FILENO) < 0)
+            exit(errno);
+
+        if (dup2(out, STDOUT_FILENO) < 0)
+            exit(errno);
+
+        execvp(path, argv);
+        exit(errno);
+    }
+
+    if (waitpid(pid, &status, 0) != pid)
+        return errno;
+
+    return WEXITSTATUS(status);
+}
+
+int
+petera_pipe(int *rend, int *wend)
+{
+    int in[2];
+
+    if (pipe(in) != 0)
+        return errno;
+
+    *rend = in[0];
+    *wend = in[1];
+    return 0;
 }

@@ -21,6 +21,7 @@
 #include "list.h"
 #include "main.h"
 #include "../../cleanup.h"
+#include "../../misc.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -108,60 +109,35 @@ error:
 }
 
 static ssize_t
-decrypt(char *argv[], const char *keyfile, size_t size, uint8_t *key)
+decrypt(char *argv[], const char *keyfile, ssize_t size, uint8_t *key)
 {
+    AUTO_FD(rfile);
+    AUTO_FD(rpipe);
     ssize_t t = 0;
-    int status;
-    int pfd[2];
-    pid_t pid;
-    int kfd;
+    int err;
 
-    kfd = open(keyfile, O_RDONLY);
-    if (kfd < 0)
+    rfile = open(keyfile, O_RDONLY);
+    if (rfile < 0)
         return -errno;
+    else {
+        AUTO_FD(wpipe);
 
-    if (pipe(pfd) != 0) {
-        close(kfd);
-        return -errno;
+        if (petera_pipe(&rpipe, &wpipe) != 0)
+            return -errno;
+
+        /* NOTE: this code depends on the kernel's pipe buffer being larger
+         * than size. This should always be the case with these short keys. */
+        err = petera_run(argv, rfile, wpipe);
+        if (err != 0)
+            return -err;
     }
 
-    pid = fork();
-    if (pid < 0) {
-        close(pfd[0]);
-        close(pfd[1]);
-        close(kfd);
-        return -errno;
-    } else if (pid == 0) {
-        close(pfd[0]);
-
-        if (dup2(kfd, STDIN_FILENO) != STDIN_FILENO)
-            exit(errno);
-
-        if (dup2(pfd[1], STDOUT_FILENO) != STDOUT_FILENO)
-            exit(errno);
-
-        execv(argv[0], argv);
-        exit(errno);
+    for (ssize_t r; (r = read(rpipe, key + t, size - t)) != 0; t += r) {
+        if (r < 0)
+            return -errno;
     }
 
-    close(pfd[1]);
-    close(kfd);
-    for (ssize_t r; (r = read(pfd[0], key + t, size - t)) != 0; t += r) {
-        if (r < 0) {
-            int e = errno;
-            close(pfd[0]);
-            return e;
-        }
-    }
-    close(pfd[0]);
-
-    if (waitpid(pid, &status, 0) != pid)
-        return -errno;
-
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
-        return t;
-
-    return -EPIPE;
+    return t;
 }
 
 

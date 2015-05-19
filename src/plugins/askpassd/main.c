@@ -91,7 +91,7 @@ askpass(int argc, char *argv[])
     signal(SIGUSR1, on_signal);
     signal(SIGUSR2, on_signal);
 
-    while (poll(fds, sizeof(fds) / sizeof(*fds), -1) > 0) {
+    while (poll(fds, sizeof(fds) / sizeof(*fds), 30000) > 0) {
         for (size_t i = 0; i < sizeof(fds) / sizeof(*fds); i++) {
             if (fds[i].revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL))
                 goto error;
@@ -112,7 +112,7 @@ askpass(int argc, char *argv[])
         askp_process(askp, &keys);
     }
 
-    if (errno == EINTR)
+    if (errno == EINTR || errno == 0)
         ret = EXIT_SUCCESS;
 
 error:

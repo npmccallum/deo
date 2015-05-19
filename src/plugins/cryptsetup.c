@@ -67,59 +67,43 @@ make_keyfile(crypt_device *cd, const char *keydir, const uint8_t *rand,
     const char *uuid = NULL;
     char keyfile[PATH_MAX];
     ssize_t written;
-    int status;
-    pid_t pid;
-    int in[2];
-    int fd;
+    AUTO_FD(rpipe);
+    AUTO_FD(wfile);
+    int err;
 
     uuid = crypt_get_uuid(cd);
     if (uuid == NULL)
         return -EINVAL;
 
-    status = snprintf(keyfile, sizeof(keyfile), "%s/%s", keydir, uuid);
-    if (status < 0 || status == sizeof(keyfile))
+    written = snprintf(keyfile, sizeof(keyfile), "%s/%s", keydir, uuid);
+    if (written < 0 || written == sizeof(keyfile))
         return -ENAMETOOLONG;
+    else {
+        AUTO_FD(wpipe);
 
-    fd = open(keyfile, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
-    if (fd < 0)
-        return -errno;
+        if (petera_pipe(&rpipe, &wpipe) != 0)
+            return -errno;
 
-    if (pipe(in) != 0)
-        return -errno;
-
-    pid = fork();
-    if (pid < 0) {
-        close(in[0]);
-        close(in[1]);
-        return -errno;
-    } else if (pid == 0) {
-        close(in[1]);
-
-        if (dup2(in[0], STDIN_FILENO) < 0)
-            exit(1);
-
-        if (dup2(fd, STDOUT_FILENO) < 0)
-            exit(1);
-
-        execvp(argv[0], argv);
-        error(EXIT_FAILURE, errno, "Execution error");
+        /* NOTE: this code depends on the kernel's pipe buffer being larger
+         * than size. This should always be the case with these short keys. */
+        written = write(wpipe, rand, size);
+        if (written < 0)
+            return -errno;
+        if (written != (ssize_t) size)
+            return -EMSGSIZE;
     }
 
-    written = write(in[1], rand, size);
-    close(in[0]);
-    close(in[1]);
-    close(fd);
-
-    if (waitpid(pid, &status, 0) != pid)
+    wfile = open(keyfile, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+    if (wfile < 0)
         return -errno;
 
-    if (WIFEXITED(status)
-        && WEXITSTATUS(status) == 0
-        && written == (ssize_t) size)
-        return 0;
+    err = petera_run(argv, rpipe, wfile);
+    if (err != 0) {
+        unlink(keyfile);
+        return -err;
+    }
 
-    unlink(keyfile);
-    return -EPIPE;
+    return 0;
 }
 
 static bool
@@ -137,7 +121,7 @@ cryptsetup(int argc, char *argv[])
     AUTO_STACK(X509, anchors);
     const char *type = NULL;
     AUTO(crypt_device, cd);
-    char *eargs[argc + 1];
+    char *args[argc + 1];
     int keysize = 0;
     int nerr = 0;
     int slot = 0;
@@ -151,10 +135,10 @@ cryptsetup(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    memset(eargs, 0, sizeof(eargs));
-    eargs[0] = argv[0];
-    eargs[1] = "encrypt";
-    memcpy(&eargs[2], &argv[optind], (argc - optind) * sizeof(char *));
+    memset(args, 0, sizeof(args));
+    args[0] = argv[0];
+    args[1] = "encrypt";
+    memcpy(&args[2], &argv[optind], (argc - optind) * sizeof(char *));
 
     nerr = crypt_init(&cd, device);
     if (nerr != 0)
@@ -186,7 +170,7 @@ cryptsetup(int argc, char *argv[])
     if (slot < 0)
         error(1, -slot, "Unable to add passphrase");
 
-    nerr = make_keyfile(cd, keydir, key, sizeof(key), eargs);
+    nerr = make_keyfile(cd, keydir, key, sizeof(key), args);
     if (nerr != 0) {
         crypt_keyslot_destroy(cd, slot);
         error(1, -nerr, "Unable to make keyfile");
