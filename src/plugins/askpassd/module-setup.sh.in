@@ -10,8 +10,6 @@ check() {
     # If petera is not installed,
     # then we cannot support it
     require_binaries petera \
-        "$systemdsystemunitdir/petera-askpassd.service" \
-        "$systemdsystemunitdir/petera-askpassd.path" \
         @PETERA_PLUGINS@/askpassd.so \
         @PETERA_PLUGINS@/decrypt.so \
         || return 1
@@ -20,7 +18,7 @@ check() {
 }
 
 depends() {
-    echo crypt systemd
+    echo crypt systemd network
     return 0
 }
 
@@ -39,10 +37,11 @@ install() {
         "$systemdsystemunitdir/petera-askpassd.path" \
         @PETERA_PLUGINS@/askpassd.so \
         @PETERA_PLUGINS@/decrypt.so \
-        @PETERA_CONF@/disks.d
+        @PETERA_CONF@/disks.d/*
 
+    mkdir -p "$initdir/$systemdsystemunitdir/cryptsetup.target.wants"
     ln_r  "$systemdsystemunitdir/petera-askpassd.path" \
-        "$systemdsystemunitdir/basic.target.wants/petera-askpassd.path"
+        "$systemdsystemunitdir/cryptsetup.target.wants/petera-askpassd.path"
 
     dracut_need_initqueue
 }
