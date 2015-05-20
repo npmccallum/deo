@@ -28,9 +28,6 @@ typedef struct {
     STACK_OF(X509_INFO) *dec;
 } ctx;
 
-void
-ctx_free(ctx *ctx);
-
 ctx *
 ctx_init(const char *tls, const char *enc, const char *dec);
 

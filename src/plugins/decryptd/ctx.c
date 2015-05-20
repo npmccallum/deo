@@ -101,7 +101,7 @@ load_prv(const char *filename)
     return PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
 }
 
-void
+static void
 ctx_free(ctx *ctx)
 {
     if (ctx == NULL)
