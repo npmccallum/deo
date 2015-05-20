@@ -43,7 +43,7 @@ load_decryption_certs_keys(const char *dirname)
         char path[strlen(dirname) + strlen(de->d_name) + 2];
         AUTO(FILE, file);
 
-        if (de->d_type != DT_REG)
+        if (!petera_isreg(dirname, de))
             continue;
 
         strcpy(path, dirname);

@@ -17,14 +17,13 @@
  */
 
 #include "list.h"
+#include <limits.h>
 #include <stdint.h>
 #include <unistd.h>
-
-#define UUID_SIZE 36
 
 struct key {
     struct list list;
     uint8_t key[256];
     ssize_t len;
-    char uuid[UUID_SIZE+1];
+    char uuid[PATH_MAX];
 };

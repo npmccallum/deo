@@ -243,10 +243,7 @@ iface_event(struct iface *ctx, char *argv[],
         bool already = false;
         char path[PATH_MAX];
 
-        if (de->d_type != DT_REG)
-            continue;
-
-        if (strlen(de->d_name) != UUID_SIZE)
+        if (!petera_isreg(keysdir, de))
             continue;
 
         LIST_FOREACH(keys, struct key, k, list) {
@@ -258,7 +255,8 @@ iface_event(struct iface *ctx, char *argv[],
         if (already)
             continue;
 
-        if (snprintf(path, sizeof(path), "%s/%s", keysdir, de->d_name) < 0)
+        len = snprintf(path, sizeof(path), "%s/%s", keysdir, de->d_name);
+        if (len < 0 || len == sizeof(path))
             continue;
 
         key = calloc(1, sizeof(struct key));

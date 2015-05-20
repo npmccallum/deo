@@ -158,7 +158,7 @@ main(int argc, char *argv[])
     for (struct dirent *de = readdir(dir); de != NULL; de = readdir(dir)) {
         const char *plugin = make_plugin_name(plugindir, de->d_name);
 
-        if (de->d_type != DT_REG)
+        if (!petera_isreg(plugindir, de))
             continue;
 
         if (!endswith(de->d_name, LT_MODULE_EXT))

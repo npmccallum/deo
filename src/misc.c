@@ -18,6 +18,7 @@
 
 #include "misc.h"
 
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <errno.h>
 #include <error.h>
@@ -272,4 +273,30 @@ petera_pipe(int *rend, int *wend)
     *rend = in[0];
     *wend = in[1];
     return 0;
+}
+
+bool
+petera_isreg(const char *dir, struct dirent *de)
+{
+    char path[PATH_MAX];
+    struct stat st;
+    int ret;
+
+    switch (de->d_type) {
+    case DT_REG:
+        return true;
+
+    case DT_UNKNOWN:
+        ret = snprintf(path, sizeof(path), "%s/%s", dir, de->d_name);
+        if (ret < 0 || ret == sizeof(path))
+            break;
+
+        if (stat(path, &st) == 0 && S_ISREG(st.st_mode))
+            return true;
+
+    default:
+        break;
+    }
+
+    return false;
 }

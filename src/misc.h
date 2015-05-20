@@ -69,3 +69,7 @@ petera_run(char *argv[], int in, int out);
 /* Exactly like pipe(), just a different signature. */
 int
 petera_pipe(int *rend, int *wend);
+
+/* Returns true if the passed dirent is a regular file. */
+bool
+petera_isreg(const char *dir, struct dirent *de);
