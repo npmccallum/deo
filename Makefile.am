@@ -5,7 +5,7 @@ AM_MAKEFLAGS = --no-print-directory
 
 CLEANALL = $(systemdsystemunit_DATA) $(dracut_DATA) $(dracut_SCRIPTS)
 
-EXTRA_DIST = CA.mk
+EXTRA_DIST = CA.mk README.md
 
 clean-local:
 	rm -rf $(CLEANALL)
