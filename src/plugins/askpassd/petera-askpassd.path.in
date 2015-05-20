@@ -3,8 +3,6 @@ Description=Petera askpass daemon path
 
 [Path]
 DirectoryNotEmpty=/run/systemd/ask-password
-DirectoryNotEmpty=@PETERA_CONF@/disks.d
-Unit=petera-askpassd.service
 
 [Install]
 WantedBy=basic.target
