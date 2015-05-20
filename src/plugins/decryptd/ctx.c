@@ -18,6 +18,7 @@
 
 #include "ctx.h"
 #include "../cleanup.h"
+#include "../misc.h"
 
 #include <openssl/err.h>
 
@@ -63,32 +64,6 @@ load_decryption_certs_keys(const char *dirname)
     return STEAL(infos);
 }
 
-static STACK_OF(X509) *
-load_encryption_chain(const char *filename)
-{
-    AUTO_STACK(X509, certs);
-    AUTO(BIO, bio);
-
-    certs = sk_X509_new_null();
-    if (certs == NULL)
-        return NULL;
-
-    bio = BIO_new_file(filename, "r");
-    if (bio == NULL)
-        return NULL;
-
-    for (X509 *cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);  cert != NULL;
-               cert = PEM_read_bio_X509(bio, NULL, NULL, NULL)) {
-        if (sk_X509_push(certs, cert) <= 0)
-            return NULL;
-    }
-
-    if (sk_X509_num(certs) == 0)
-        return NULL;
-
-    return STEAL(certs);
-}
-
 static EVP_PKEY *
 load_prv(const char *filename)
 {
@@ -118,6 +93,7 @@ ctx_init(const char *tls, const char *enc, const char *dec)
 {
     AUTO_STACK(X509_INFO, infos);
     AUTO(EVP_PKEY, prv);
+    AUTO(FILE, file);
     AUTO(ctx, ctx);
 
     if (tls == NULL || enc == NULL || dec == NULL)
@@ -142,8 +118,15 @@ ctx_init(const char *tls, const char *enc, const char *dec)
     if (SSL_CTX_use_PrivateKey(ctx->ctx, prv) <= 0)
         return NULL;
 
-    ctx->crt = load_encryption_chain(enc);
+    file = fopen(enc, "r");
+    if (file == NULL)
+        return NULL;
+
+    ctx->crt = sk_X509_new_null();
     if (ctx->crt == NULL)
+        return NULL;
+
+    if (!petera_load(file, ctx->crt))
         return NULL;
 
     ctx->dec = load_decryption_certs_keys(dec);
