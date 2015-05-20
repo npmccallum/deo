@@ -40,6 +40,8 @@ askpassd_la_SOURCES = \
 install-data-hook:
 	$(MKDIR_P) $(DESTDIR)/$(PETERA_CONF)/decrypt.d
 	$(MKDIR_P) $(DESTDIR)/$(PETERA_CONF)/disks.d
+	touch $(DESTDIR)/$(PETERA_CONF)/decryptd.pem
+	touch $(DESTDIR)/$(PETERA_CONF)/encrypt.pem
 	rm -f $(DESTDIR)/$(plugindir)/*.la
 
 CLEANFILES = $(systemdsystemunit_DATA) $(dracut_SCRIPTS)
