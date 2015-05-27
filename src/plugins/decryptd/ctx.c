@@ -91,7 +91,6 @@ ctx_free(ctx *ctx)
 ctx *
 ctx_init(const char *tls, const char *enc, const char *dec)
 {
-    AUTO_STACK(X509_INFO, infos);
     AUTO(EVP_PKEY, prv);
     AUTO(FILE, file);
     AUTO(ctx, ctx);

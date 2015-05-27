@@ -29,7 +29,6 @@ query(int argc, char *argv[])
     PETERA_ERR err = PETERA_ERR_NONE;
     AUTO_STACK(X509, anchors);
     AUTO(PETERA_MSG, rep);
-    AUTO(FILE, fp);
 
     if (!petera_getopt(argc, argv, "ha:", "", NULL, NULL,
                        petera_anchors, &anchors)

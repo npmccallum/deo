@@ -214,7 +214,6 @@ encrypt_body(const PETERA_HEADER *hdr, const uint8_t *key, FILE *in, FILE *out)
     uint8_t tag[EVP_GCM_TLS_TAG_LEN];
     AUTO(EVP_CIPHER_CTX, cctx);
     uint8_t pt[PROCESS_BLOCK];
-    AUTO(SSL_CTX, ctx);
     size_t ptl;
     int ctl;
 
