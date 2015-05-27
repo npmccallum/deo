@@ -4,7 +4,8 @@ AM_CFLAGS = \
 	-Wextra \
 	-Werror \
 	-Wno-missing-field-initializers \
-	-Wno-unused-parameter
+	-Wno-unused-parameter \
+	-Wno-sign-compare
 
 plugin_LTLIBRARIES = \
 	askpassd.la \
