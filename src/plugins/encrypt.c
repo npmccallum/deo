@@ -178,7 +178,7 @@ make_header(const STACK_OF(X509) *anchors, const STACK_OF(X509) *targets,
 
     hdr = PETERA_HEADER_new();
     if (hdr == NULL)
-        return EXIT_FAILURE;
+        return NULL;
 
     if (!make_dec_req(cipher, md, targets, key, hdr->req))
         return NULL;
@@ -186,11 +186,11 @@ make_header(const STACK_OF(X509) *anchors, const STACK_OF(X509) *targets,
     for (int i = 0; anchors != NULL && i < sk_X509_num(anchors); i++) {
         X509 *cert = X509_dup(sk_X509_value(anchors, i));
         if (cert == NULL)
-            return false;
+            return NULL;
 
         if (sk_X509_push(hdr->anchors, cert) <= 0) {
             X509_free(cert);
-            return false;
+            return NULL;
         }
     }
 
