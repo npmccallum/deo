@@ -23,7 +23,7 @@ depends() {
 }
 
 cmdline() {
-    echo "rd.neednet"
+    echo "rd.neednet=1"
 }
 
 install() {
@@ -31,6 +31,8 @@ install() {
         derror "petera needs systemd in the initramfs"
         return 1
     fi
+
+    cmdline > "${initdir}/etc/cmdline.d/99petera.conf"
 
     inst_multiple petera \
         "$systemdsystemunitdir/petera-askpassd.service" \
