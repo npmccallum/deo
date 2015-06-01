@@ -193,9 +193,6 @@ item_new(const char *name)
 
         item->time.tv_sec = usec / 1000000;
         item->time.tv_nsec = usec % 1000000 * 1000;
-    } else {
-        item->time.tv_sec = (time_t) -1;
-        item->time.tv_nsec = -1;
     }
 
     item->sock = find_prefix_in_section(start, end, PREFIX_SOCKET);
@@ -298,10 +295,8 @@ askp_event(struct askp *ctx)
 
         if (e->mask & IN_MOVED_TO) {
             item = item_new(e->name);
-            if (item) {
+            if (item != NULL)
                 list_add_after(&ctx->list, &item->list);
-            }
-
             continue;
         }
 
@@ -329,7 +324,7 @@ askp_process(struct askp *ctx, struct list *keys)
         struct sockaddr_un addr = { AF_UNIX };
         struct key *key = NULL;
 
-        if (item->time.tv_sec != (time_t) -1) {
+        if (item->time.tv_sec != 0 || item->time.tv_nsec != 0) {
             if (item->time.tv_sec < now.tv_sec)
                 continue;
 
