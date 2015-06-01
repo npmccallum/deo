@@ -100,6 +100,11 @@ In the default install, these items are, respectively, located at:
 2. /etc/petera/encrypt.pem
 3. /etc/petera/decrypt.d
 
+On important note is necessary. The encryption certificate advertised to the
+client MUST have a subject with a commonName that resolves to the decryption
+server. This is the hostname that the client will use during decryption. This
+hostname may be an IP address.
+
 ###### Enablement
 
 To enable the server, just run the following as root:
@@ -117,20 +122,23 @@ Second, you must have a client with LUKS disk encryption already enabled.
 ###### Setup
 Both of the following commands are run as root.
 
-The first command we will run simply adds a new random key to the pre-existing
-LUKS encrypted disk and then encrypts it using Petera in a known location:
+First, we will configure the initramfs for networking. If you are using IPv4
+DHCP, no configuration is needed. For other setups, please consult the dracut
+documentation.
+
+Second, we will add a new random key to the pre-existing LUKS encrypted disk
+and then encrypt it using Petera in a known location. This command works
+exactly like the encrypt command with the exception that a LUKS encrypted disk
+must be specified:
 
     # petera cryptsetup -d /dev/<disk> -a <anchor> <target>
-
-Next, we will configure the initramfs for networking. For more information,
-please consult the dracut documentation.
 
 Finally, we need to rebuild the system's initramfs:
 
     # dracut -f
 
 That's it! Once you reboot, the disk should unlock automatically so long as
-one of the specified encryption target servers is available.
+one of the specified encryption targets is available.
 
 ##### Future Improvements
 
