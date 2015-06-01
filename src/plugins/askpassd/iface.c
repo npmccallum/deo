@@ -18,7 +18,6 @@
 
 #define _GNU_SOURCE
 #include "iface.h"
-#include "list.h"
 #include "main.h"
 #include "../../cleanup.h"
 #include "../../misc.h"
@@ -41,21 +40,7 @@
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 
-struct item {
-    struct list list;
-    struct {
-        sa_family_t family;
-        char iface[IF_NAMESIZE];
-        union {
-            struct in_addr ipv4;
-            struct in6_addr ipv6;
-        } addr;
-    } addr;
-    bool isnew;
-};
-
 struct iface {
-    struct list list;
     int fd;
 };
 
@@ -64,10 +49,10 @@ request_existing(int sock, int family)
 {
     struct {
         struct nlmsghdr h;
-        struct ifaddrmsg m;
+        struct rtmsg m;
     } req = {
-        { NLMSG_LENGTH(sizeof(struct ifaddrmsg)),
-          RTM_GETADDR, NLM_F_REQUEST | NLM_F_DUMP, 0, getpid() },
+        { NLMSG_LENGTH(sizeof(struct rtmsg)),
+          RTM_GETROUTE, NLM_F_REQUEST | NLM_F_DUMP, 0, getpid() },
         { family }
     };
 
@@ -79,7 +64,7 @@ iface_new(struct iface **ctx, struct pollfd *fd)
 {
     struct sockaddr_nl addr = {
         .nl_family = AF_NETLINK,
-        .nl_groups = RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR
+        .nl_groups = RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE
     };
     int ret;
 
@@ -87,8 +72,7 @@ iface_new(struct iface **ctx, struct pollfd *fd)
     if (!*ctx)
         return ENOMEM;
 
-    (*ctx)->list = LIST_INIT((*ctx)->list);
-    (*ctx)->fd = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    (*ctx)->fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
     if ((*ctx)->fd < 0)
         goto error;
 
@@ -158,79 +142,20 @@ iface_event(struct iface *ctx, char *argv[],
     for (struct nlmsghdr *msghdr = (struct nlmsghdr *) buf;
          NLMSG_OK(msghdr, len) && msghdr->nlmsg_type != NLMSG_DONE;
          msghdr = NLMSG_NEXT(msghdr, len)) {
-        struct ifaddrmsg *addrmsg = (struct ifaddrmsg *) NLMSG_DATA(msghdr);
-        int rtlen = IFA_PAYLOAD(msghdr);
+        struct rtmsg *rtmsg = NLMSG_DATA(msghdr);
 
         switch (msghdr->nlmsg_type) {
-        case RTM_NEWADDR:
-        case RTM_DELADDR:
+        case RTM_NEWROUTE:
+            switch (rtmsg->rtm_type) {
+            case RTN_LOCAL:
+            case RTN_UNICAST:
+                havenew = true;
+                break;
+            }
             break;
-
-        default:
-            continue;
-        }
-
-        for (struct rtattr *attr = IFA_RTA(addrmsg);
-             RTA_OK(attr, rtlen);
-             attr = RTA_NEXT(attr, rtlen)) {
-            struct item addr = { .isnew = true};
-            struct item *have = NULL;
-
-            if (attr->rta_type != IFA_LOCAL)
-                continue;
-
-            if (if_indextoname(addrmsg->ifa_index, addr.addr.iface) == NULL)
-                continue;
-
-            addr.addr.family = addrmsg->ifa_family;
-            switch (addr.addr.family) {
-            case AF_INET:
-                memcpy(&addr.addr.addr.ipv4, RTA_DATA(attr),
-                       sizeof(addr.addr.addr.ipv4));
-                break;
-
-            case AF_INET6:
-                memcpy(&addr.addr.addr.ipv6, RTA_DATA(attr),
-                       sizeof(addr.addr.addr.ipv6));
-                break;
-
-            default:
-                continue;
-            }
-
-            LIST_FOREACH(&ctx->list, struct item, item, list) {
-                if (memcmp(&item->addr, &addr.addr, sizeof(addr.addr)) == 0) {
-                    have = item;
-                    break;
-                }
-            }
-
-            switch (msghdr->nlmsg_type) {
-            case RTM_NEWADDR:
-                if (have)
-                    continue;
-
-                have = malloc(sizeof(*have));
-                if (have == NULL)
-                    return ENOMEM;
-
-                memcpy(have, &addr, sizeof(addr));
-                list_add_after(&ctx->list, &have->list);
-                break;
-
-            case RTM_DELADDR:
-                if (have)
-                    list_pop(&have->list);
-                free(have);
-                break;
-            }
         }
     }
 
-    LIST_FOREACH(&ctx->list, struct item, item, list) {
-        havenew |= item->isnew;
-        item->isnew = false;
-    }
     if (!havenew)
         return 0;
 
@@ -271,6 +196,9 @@ iface_event(struct iface *ctx, char *argv[],
             continue;
         }
 
+        fprintf(stderr, "Received key for %s\n", de->d_name);
+        fsync(STDERR_FILENO);
+
         strncpy(key->uuid, de->d_name, sizeof(key->uuid));
         list_add_after(keys, &key->list);
     }
@@ -283,9 +211,6 @@ iface_free(struct iface *ctx)
 {
     if (!ctx)
         return;
-
-    LIST_FOREACH(&ctx->list, struct item, item, list)
-        free(item);
 
     if (ctx->fd > 0)
         close(ctx->fd);
