@@ -71,9 +71,6 @@ askpass(int argc, char *argv[])
     dargs[1] = "decrypt";
     memcpy(&dargs[2], &argv[optind], (argc - optind) * sizeof(char *));
 
-    if (access(argv[0], X_OK) != 0)
-        error(EXIT_FAILURE, errno, "Unable to execute binary");
-
     if (access(keydir, R_OK) != 0
         || stat(keydir, &st) != 0
         || !S_ISDIR(st.st_mode))
