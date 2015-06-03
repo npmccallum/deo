@@ -71,14 +71,14 @@ find_cert(STACK_OF(X509_INFO) *infos, const EVP_MD *md,
 
 static bool
 find_key_prv(STACK_OF(X509_INFO) *infos, const EVP_MD *md,
-             STACK_OF(PETERA_KEY) *keys, ASN1_OCTET_STRING **key,
+             STACK_OF(DEO_KEY) *keys, ASN1_OCTET_STRING **key,
              EVP_PKEY **prv)
 {
     if (infos == NULL || md == NULL || key == NULL || prv == NULL)
         return NULL;
 
-    for (int i = 0; i < SKM_sk_num(PETERA_KEY, keys); i++) {
-        PETERA_KEY *k = SKM_sk_value(PETERA_KEY, keys, i);
+    for (int i = 0; i < SKM_sk_num(DEO_KEY, keys); i++) {
+        DEO_KEY *k = SKM_sk_value(DEO_KEY, keys, i);
 
         *prv = find_prv(infos, find_cert(infos, md, k->hash));
         if (*prv != NULL) {
@@ -92,7 +92,7 @@ find_key_prv(STACK_OF(X509_INFO) *infos, const EVP_MD *md,
 
 static ASN1_OCTET_STRING *
 unseal(const EVP_CIPHER *cipher, ASN1_OCTET_STRING *key, EVP_PKEY *prv,
-       PETERA_MSG_DEC_REQ *dr)
+       DEO_MSG_DEC_REQ *dr)
 {
     uint8_t buf[dr->data->length];
     ASN1_OCTET_STRING pt = {
@@ -128,7 +128,7 @@ unseal(const EVP_CIPHER *cipher, ASN1_OCTET_STRING *key, EVP_PKEY *prv,
 }
 
 static const EVP_CIPHER *
-load_cipher(PETERA_MSG_DEC_REQ *dr)
+load_cipher(DEO_MSG_DEC_REQ *dr)
 {
     const EVP_CIPHER *cipher = NULL;
 
@@ -154,7 +154,7 @@ load_cipher(PETERA_MSG_DEC_REQ *dr)
 }
 
 static const EVP_MD *
-load_digest(PETERA_MSG_DEC_REQ *dr)
+load_digest(DEO_MSG_DEC_REQ *dr)
 {
     switch (OBJ_obj2nid(dr->digest)) {
     case NID_sha1:
@@ -169,8 +169,8 @@ load_digest(PETERA_MSG_DEC_REQ *dr)
     }
 }
 
-PETERA_ERR
-decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt)
+DEO_ERR
+decrypt(ctx *ctx, DEO_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt)
 {
     const EVP_CIPHER *cipher = NULL;
     const EVP_MD *digest = NULL;
@@ -179,15 +179,15 @@ decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt)
 
     cipher = load_cipher(dr);
     if (cipher == NULL)
-        return PETERA_ERR_NOSUPPORT_CIPHER;
+        return DEO_ERR_NOSUPPORT_CIPHER;
 
     digest = load_digest(dr);
     if (digest == NULL)
-        return PETERA_ERR_NOSUPPORT_DIGEST;
+        return DEO_ERR_NOSUPPORT_DIGEST;
 
     if (!find_key_prv(ctx->dec, digest, dr->keys, &key, &prv))
-        return PETERA_ERR_NOTFOUND_KEY;
+        return DEO_ERR_NOTFOUND_KEY;
 
     *pt = unseal(cipher, key, prv, dr);
-    return *pt == NULL ? PETERA_ERR_INTERNAL : PETERA_ERR_NONE;
+    return *pt == NULL ? DEO_ERR_INTERNAL : DEO_ERR_NONE;
 }

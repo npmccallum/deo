@@ -1,5 +1,5 @@
 [Unit]
-Description=Petera askpass daemon path
+Description=Deo askpass daemon path
 DefaultDependencies=false
 
 [Path]

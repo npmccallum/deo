@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT(petera, 0.3)
+AC_INIT(deo, 0.3)
 AC_CANONICAL_SYSTEM
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -15,7 +15,7 @@ LT_INIT([disable-static])
 LT_SYS_MODULE_EXT
 
 AC_CHECK_FILE([/usr/lib/dracut/modules.d],
-              [AC_SUBST([dracutdir], [/usr/lib/dracut/modules.d/60petera])],
+              [AC_SUBST([dracutdir], [/usr/lib/dracut/modules.d/60deo])],
               [AC_MSG_ERROR(not found)])
 
 PKG_PROG_PKG_CONFIG([0.25])
@@ -31,13 +31,13 @@ AC_ARG_WITH([systemdsystemunitdir],
 AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
 
 
-AC_SUBST([PETERA_SOCKET], [5700])
-AC_SUBST([PETERA_CONF], [${sysconfdir}/${PACKAGE_NAME}])
+AC_SUBST([DEO_SOCKET], [5700])
+AC_SUBST([DEO_CONF], [${sysconfdir}/${PACKAGE_NAME}])
 AC_SUBST([plugindir], [${libdir}/${PACKAGE_NAME}/plugins])
 
-AX_DEFINE_DIR(PETERA_SOCKET, PETERA_SOCKET, [Default petera socket])
-AX_DEFINE_DIR(PETERA_CONF, PETERA_CONF, [Location of petera configuration])
-AX_DEFINE_DIR(PETERA_PLUGINS, plugindir, [Location of petera plugins])
+AX_DEFINE_DIR(DEO_SOCKET, DEO_SOCKET, [Default deo socket])
+AX_DEFINE_DIR(DEO_CONF, DEO_CONF, [Location of deo configuration])
+AX_DEFINE_DIR(DEO_PLUGINS, plugindir, [Location of deo plugins])
 
 AX_CHECK_GNU_MAKE()
 AC_CONFIG_FILES(Makefile src/Makefile src/plugins/Makefile)

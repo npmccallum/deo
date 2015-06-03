@@ -1,0 +1,8 @@
+[Unit]
+Description=Deo askpass daemon
+DefaultDependencies=false
+ConditionDirectoryNotEmpty=@DEO_CONF@/disks.d
+
+[Service]
+ExecStart=@bindir@/deo askpassd
+StandardError=syslog

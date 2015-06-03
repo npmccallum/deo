@@ -43,7 +43,7 @@ load_decryption_certs_keys(const char *dirname)
         char path[strlen(dirname) + strlen(de->d_name) + 2];
         AUTO(FILE, file);
 
-        if (!petera_isreg(dirname, de))
+        if (!deo_isreg(dirname, de))
             continue;
 
         strcpy(path, dirname);
@@ -125,7 +125,7 @@ ctx_init(const char *tls, const char *enc, const char *dec)
     if (ctx->crt == NULL)
         return NULL;
 
-    if (!petera_load(file, ctx->crt))
+    if (!deo_load(file, ctx->crt))
         return NULL;
 
     ctx->dec = load_decryption_certs_keys(dec);

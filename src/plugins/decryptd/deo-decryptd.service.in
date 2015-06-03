@@ -1,0 +1,9 @@
+[Unit]
+Description=Deo decryption daemon
+ConditionDirectoryNotEmpty=@DEO_CONF@/decrypt.d
+ConditionFileNotEmpty=@DEO_CONF@/decryptd.pem
+ConditionPathExists=@DEO_CONF@/encrypt.pem
+
+[Service]
+ExecStart=@bindir@/deo decryptd -t @DEO_CONF@/decryptd.pem -e @DEO_CONF@/encrypt.pem -d @DEO_CONF@/decrypt.d
+StandardError=syslog

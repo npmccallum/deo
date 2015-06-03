@@ -22,13 +22,13 @@
 #include <error.h>
 #include <unistd.h>
 
-static PETERA_HEADER *
+static DEO_HEADER *
 parse_header(const STACK_OF(X509) *anchors, size_t ntargets,
              char *targets[], FILE *in)
 {
-    AUTO(PETERA_HEADER, hdr);
+    AUTO(DEO_HEADER, hdr);
 
-    hdr = d2i_fp_max(&PETERA_HEADER_it, in, NULL, PETERA_MAX_INPUT);
+    hdr = d2i_fp_max(&DEO_HEADER_it, in, NULL, DEO_MAX_INPUT);
     if (hdr == NULL)
         return NULL;
 
@@ -63,18 +63,18 @@ parse_header(const STACK_OF(X509) *anchors, size_t ntargets,
 }
 
 static ASN1_OCTET_STRING *
-fetch_key(const PETERA_HEADER *hdr)
+fetch_key(const DEO_HEADER *hdr)
 {
     for (int i = 0; i < sk_ASN1_UTF8STRING_num(hdr->targets); i++) {
         ASN1_UTF8STRING *trgt = sk_ASN1_UTF8STRING_value(hdr->targets, i);
-        AUTO(PETERA_MSG, rep);
+        AUTO(DEO_MSG, rep);
 
-        rep = petera_request(hdr->anchors, trgt, &(PETERA_MSG) {
-            .type = PETERA_MSG_TYPE_DEC_REQ,
+        rep = deo_request(hdr->anchors, trgt, &(DEO_MSG) {
+            .type = DEO_MSG_TYPE_DEC_REQ,
             .value.dec_req = hdr->req
         });
 
-        if (rep != NULL && rep->type == PETERA_MSG_TYPE_DEC_REP)
+        if (rep != NULL && rep->type == DEO_MSG_TYPE_DEC_REP)
             return STEAL(rep->value.dec_rep);
     }
 
@@ -82,7 +82,7 @@ fetch_key(const PETERA_HEADER *hdr)
 }
 
 static bool
-decrypt_body(const PETERA_HEADER *hdr, const ASN1_OCTET_STRING *key,
+decrypt_body(const DEO_HEADER *hdr, const ASN1_OCTET_STRING *key,
              FILE *in, FILE *out)
 {
     const EVP_CIPHER *cipher = NULL;
@@ -165,12 +165,12 @@ decrypt(int argc, char *argv[])
 {
     AUTO(ASN1_OCTET_STRING, key);
     AUTO_STACK(X509, anchors);
-    AUTO(PETERA_HEADER, hdr);
+    AUTO(DEO_HEADER, hdr);
 
-    if (!petera_getopt(argc, argv, "ha:", "", NULL, NULL,
-                       petera_anchors, &anchors)) {
+    if (!deo_getopt(argc, argv, "ha:", "", NULL, NULL,
+                       deo_anchors, &anchors)) {
         fprintf(stderr,
-                "Usage: petera decrypt "
+                "Usage: deo decrypt "
                 "[-a <anchors>] [<target> ...] "
                 "< CIPHERTEXT > PLAINTEXT\n");
         return EXIT_FAILURE;
@@ -187,6 +187,6 @@ decrypt(int argc, char *argv[])
     return decrypt_body(hdr, key, stdin, stdout) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-petera_plugin petera = {
+deo_plugin deo = {
     decrypt, "Decrypts input using any of the targets"
 };

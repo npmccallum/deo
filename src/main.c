@@ -32,7 +32,7 @@
 struct record {
     void *dll;
     char *name;
-    petera_plugin plug;
+    deo_plugin plug;
 };
 
 static struct {
@@ -100,7 +100,7 @@ make_plugin_name(const char *plugindir, const char *name)
 static void
 load_plugin(const char *path)
 {
-    const petera_plugin *tmp = NULL;
+    const deo_plugin *tmp = NULL;
     const char *tmpx;
 
     if (inv.cnt >= MAX_PLUGINS)
@@ -118,7 +118,7 @@ load_plugin(const char *path)
     if (inv.rec[inv.cnt].dll == NULL)
         error(EXIT_FAILURE, 0, "Unable to open plugin: %s", dlerror());
 
-    tmp = dlsym(inv.rec[inv.cnt++].dll, "petera");
+    tmp = dlsym(inv.rec[inv.cnt++].dll, "deo");
     if (tmp == NULL)
         error(EXIT_FAILURE, 0, "Unable to read plugin: %s", dlerror());
 
@@ -128,13 +128,13 @@ load_plugin(const char *path)
 int
 main(int argc, char *argv[])
 {
-    const char *plugindir = getenv("PETERA_PLUGINS");
+    const char *plugindir = getenv("DEO_PLUGINS");
     int ret = EXIT_FAILURE;
     int max = 0;
     AUTO(DIR, dir);
 
     if (plugindir == NULL)
-        plugindir = PETERA_PLUGINS;
+        plugindir = DEO_PLUGINS;
 
     SSL_load_error_strings();
     SSL_library_init();
@@ -158,7 +158,7 @@ main(int argc, char *argv[])
     for (struct dirent *de = readdir(dir); de != NULL; de = readdir(dir)) {
         const char *plugin = make_plugin_name(plugindir, de->d_name);
 
-        if (!petera_isreg(plugindir, de))
+        if (!deo_isreg(plugindir, de))
             continue;
 
         if (!endswith(de->d_name, LT_MODULE_EXT))

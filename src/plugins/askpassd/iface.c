@@ -106,12 +106,12 @@ decrypt(char *argv[], const char *keyfile, ssize_t size, uint8_t *key)
     else {
         AUTO_FD(wpipe);
 
-        if (petera_pipe(&rpipe, &wpipe) != 0)
+        if (deo_pipe(&rpipe, &wpipe) != 0)
             return -errno;
 
         /* NOTE: this code depends on the kernel's pipe buffer being larger
          * than size. This should always be the case with these short keys. */
-        err = petera_run(argv, rfile, wpipe);
+        err = deo_run(argv, rfile, wpipe);
         if (err != 0)
             return -err;
     }
@@ -168,7 +168,7 @@ iface_event(struct iface *ctx, char *argv[],
         bool already = false;
         char path[PATH_MAX];
 
-        if (!petera_isreg(keysdir, de))
+        if (!deo_isreg(keysdir, de))
             continue;
 
         LIST_FOREACH(keys, struct key, k, list) {

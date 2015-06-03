@@ -1,8 +1,0 @@
-[Unit]
-Description=Petera askpass daemon
-DefaultDependencies=false
-ConditionDirectoryNotEmpty=@PETERA_CONF@/disks.d
-
-[Service]
-ExecStart=@bindir@/petera askpassd
-StandardError=syslog

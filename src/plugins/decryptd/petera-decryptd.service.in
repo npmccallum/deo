@@ -1,9 +1,0 @@
-[Unit]
-Description=Petera decryption daemon
-ConditionDirectoryNotEmpty=@PETERA_CONF@/decrypt.d
-ConditionFileNotEmpty=@PETERA_CONF@/decryptd.pem
-ConditionPathExists=@PETERA_CONF@/encrypt.pem
-
-[Service]
-ExecStart=@bindir@/petera decryptd -t @PETERA_CONF@/decryptd.pem -e @PETERA_CONF@/encrypt.pem -d @PETERA_CONF@/decrypt.d
-StandardError=syslog

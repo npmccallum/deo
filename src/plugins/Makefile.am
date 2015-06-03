@@ -1,4 +1,4 @@
-AM_LDFLAGS = -module -avoid-version -export-symbols-regex ^petera$
+AM_LDFLAGS = -module -avoid-version -export-symbols-regex ^deo$
 AM_CFLAGS = \
 	-Wall \
 	-Wextra \
@@ -39,31 +39,31 @@ askpassd_la_SOURCES = \
 	askpassd/main.h
 
 install-data-hook:
-	$(MKDIR_P) $(DESTDIR)/$(PETERA_CONF)/decrypt.d
-	$(MKDIR_P) $(DESTDIR)/$(PETERA_CONF)/disks.d
-	touch $(DESTDIR)/$(PETERA_CONF)/decryptd.pem
-	touch $(DESTDIR)/$(PETERA_CONF)/encrypt.pem
+	$(MKDIR_P) $(DESTDIR)/$(DEO_CONF)/decrypt.d
+	$(MKDIR_P) $(DESTDIR)/$(DEO_CONF)/disks.d
+	touch $(DESTDIR)/$(DEO_CONF)/decryptd.pem
+	touch $(DESTDIR)/$(DEO_CONF)/encrypt.pem
 	rm -f $(DESTDIR)/$(plugindir)/*.la
 
 CLEANFILES = $(systemdsystemunit_DATA) $(dracut_SCRIPTS)
 EXTRA_DIST = \
-	decryptd/petera-decryptd.service.in \
-	decryptd/petera-decryptd.socket.in \
-	askpassd/petera-askpassd.path.in \
-	askpassd/petera-askpassd.service.in \
+	decryptd/deo-decryptd.service.in \
+	decryptd/deo-decryptd.socket.in \
+	askpassd/deo-askpassd.path.in \
+	askpassd/deo-askpassd.service.in \
 	askpassd/module-setup.sh.in
 
 dracut_SCRIPTS = askpassd/module-setup.sh
 systemdsystemunit_DATA = \
-	decryptd/petera-decryptd.socket \
-	decryptd/petera-decryptd.service \
-	askpassd/petera-askpassd.path \
-	askpassd/petera-askpassd.service
+	decryptd/deo-decryptd.socket \
+	decryptd/deo-decryptd.service \
+	askpassd/deo-askpassd.path \
+	askpassd/deo-askpassd.service
 
 %: %.in
 	$(AM_V_GEN)$(SED) \
 		-e 's,@bindir\@,$(bindir),g' \
-		-e 's,@PETERA_CONF\@,$(PETERA_CONF),g' \
-		-e 's,@PETERA_SOCKET\@,$(PETERA_SOCKET),g' \
-		-e 's,@PETERA_PLUGINS\@,$(PETERA_PLUGINS),g' \
+		-e 's,@DEO_CONF\@,$(DEO_CONF),g' \
+		-e 's,@DEO_SOCKET\@,$(DEO_SOCKET),g' \
+		-e 's,@DEO_PLUGINS\@,$(DEO_PLUGINS),g' \
 		$(srcdir)/$@.in > $@

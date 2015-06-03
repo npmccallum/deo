@@ -8,11 +8,11 @@ AM_CFLAGS = \
 	-Wno-unused-parameter \
 	-Wno-sign-compare
 
-bin_PROGRAMS = petera
-petera_CFLAGS = $(AM_CFLAGS) @OPENSSL_CFLAGS@ -ldl
-petera_LDADD = @OPENSSL_LIBS@
-petera_LDFLAGS = -rdynamic
-petera_SOURCES = \
+bin_PROGRAMS = deo
+deo_CFLAGS = $(AM_CFLAGS) @OPENSSL_CFLAGS@ -ldl
+deo_LDADD = @OPENSSL_LIBS@
+deo_LDFLAGS = -rdynamic
+deo_SOURCES = \
 	asn1.c \
 	asn1.h \
 	cleanup.c \

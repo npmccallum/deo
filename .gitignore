@@ -25,10 +25,6 @@ configure-stamp
 depcomp
 install-sh
 Makefile.in
+Makefile
 missing
 test-driver
-
-/Makefile
-/petera
-/peterad
-/peterad.service

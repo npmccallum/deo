@@ -47,7 +47,7 @@ option(char c, const char *arg, const char **misc)
 static int
 askpass(int argc, char *argv[])
 {
-    const char *keydir = PETERA_CONF "/disks.d";
+    const char *keydir = DEO_CONF "/disks.d";
     struct iface *iface = NULL;
     AUTO_STACK(X509, anchors);
     struct askp *askp = NULL;
@@ -57,10 +57,10 @@ askpass(int argc, char *argv[])
     struct stat st;
     LIST(keys);
 
-    if (!petera_getopt(argc, argv, "hk:", "a:", NULL, NULL,
-                       option, &keydir, petera_anchors, &anchors)) {
+    if (!deo_getopt(argc, argv, "hk:", "a:", NULL, NULL,
+                       option, &keydir, deo_anchors, &anchors)) {
         fprintf(stderr,
-                "Usage: petera askpassd "
+                "Usage: deo askpassd "
                 "[-k <keydir>] [-a <anchors>] "
                 "[<target> ...]\n");
         return EXIT_FAILURE;
@@ -121,4 +121,4 @@ error:
     return ret;
 }
 
-petera_plugin petera = { askpass, NULL };
+deo_plugin deo = { askpass, NULL };

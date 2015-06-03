@@ -73,7 +73,7 @@ make_targets(const STACK_OF(X509) *certs, STACK_OF(ASN1_UTF8STRING) *targets)
 static bool
 make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
              const STACK_OF(X509) *certs, const uint8_t *key,
-             PETERA_MSG_DEC_REQ *dr)
+             DEO_MSG_DEC_REQ *dr)
 {
     uint8_t ct[cipher->key_len + EVP_CIPHER_block_size(cipher) - 1];
     uint8_t iv[EVP_CIPHER_iv_length(cipher)];
@@ -97,19 +97,19 @@ make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
         X509 *cert = sk_X509_value(certs, i);
         uint8_t digest[EVP_MAX_MD_SIZE];
         unsigned int dlen;
-        PETERA_KEY *k;
+        DEO_KEY *k;
 
         keys[i] = cert->cert_info->key->pkey;
         ekeys[i] = OPENSSL_malloc(EVP_PKEY_size(keys[i]));
         if (ekeys[i] == NULL)
             goto error;
 
-        k = PETERA_KEY_new();
+        k = DEO_KEY_new();
         if (k == NULL)
             goto error;
 
-        if (SKM_sk_push(PETERA_KEY, dr->keys, k) != 1) {
-            PETERA_KEY_free(k);
+        if (SKM_sk_push(DEO_KEY, dr->keys, k) != 1) {
+            DEO_KEY_free(k);
             goto error;
         }
 
@@ -131,8 +131,8 @@ make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
     if (ASN1_OCTET_STRING_set(dr->iv, iv, sizeof(iv)) != 1)
         goto error;
 
-    for (int i = 0; i < SKM_sk_num(PETERA_KEY, dr->keys); i++) {
-        PETERA_KEY *k = SKM_sk_value(PETERA_KEY, dr->keys, i);
+    for (int i = 0; i < SKM_sk_num(DEO_KEY, dr->keys); i++) {
+        DEO_KEY *k = SKM_sk_value(DEO_KEY, dr->keys, i);
         if (ASN1_OCTET_STRING_set(k->key, ekeys[i], ekeysl[i]) != 1)
             goto error;
     }
@@ -164,19 +164,19 @@ error:
     return ret;
 }
 
-static PETERA_HEADER *
+static DEO_HEADER *
 make_header(const STACK_OF(X509) *anchors, const STACK_OF(X509) *targets,
             const uint8_t *key)
 {
     const EVP_CIPHER *cipher = EVP_aes_256_gcm();
     const EVP_MD *md = EVP_sha256();
     uint8_t iv[EVP_MAX_IV_LENGTH];
-    AUTO(PETERA_HEADER, hdr);
+    AUTO(DEO_HEADER, hdr);
 
     if (cipher == NULL || md == NULL)
         return NULL;
 
-    hdr = PETERA_HEADER_new();
+    hdr = DEO_HEADER_new();
     if (hdr == NULL)
         return NULL;
 
@@ -207,7 +207,7 @@ make_header(const STACK_OF(X509) *anchors, const STACK_OF(X509) *targets,
 }
 
 static bool
-encrypt_body(const PETERA_HEADER *hdr, const uint8_t *key, FILE *in, FILE *out)
+encrypt_body(const DEO_HEADER *hdr, const uint8_t *key, FILE *in, FILE *out)
 {
     const EVP_CIPHER *cipher = EVP_get_cipherbyobj(hdr->req->cipher);
     uint8_t ct[PROCESS_BLOCK + EVP_MAX_BLOCK_LENGTH];
@@ -217,7 +217,7 @@ encrypt_body(const PETERA_HEADER *hdr, const uint8_t *key, FILE *in, FILE *out)
     size_t ptl;
     int ctl;
 
-    if (ASN1_item_i2d_fp(&PETERA_HEADER_it, stdout, (void *) hdr) != 1)
+    if (ASN1_item_i2d_fp(&DEO_HEADER_it, stdout, (void *) hdr) != 1)
         return false;
 
     cctx = EVP_CIPHER_CTX_new();
@@ -259,13 +259,13 @@ encrypt(int argc, char *argv[])
 {
     uint8_t key[EVP_MAX_KEY_LENGTH];
     AUTO_STACK(X509, anchors);
-    AUTO(PETERA_HEADER, hdr);
+    AUTO(DEO_HEADER, hdr);
     AUTO_STACK(X509, certs);
 
-    if (!petera_getopt(argc, argv, "ha:", "", NULL, NULL,
-                       petera_anchors, &anchors)
+    if (!deo_getopt(argc, argv, "ha:", "", NULL, NULL,
+                       deo_anchors, &anchors)
         || sk_X509_num(anchors) == 0 || argc - optind < 1) {
-        fprintf(stderr, "Usage: petera encrypt "
+        fprintf(stderr, "Usage: deo encrypt "
                         "-a <anchors> <target> [...] "
                         "< PLAINTEXT > CIPHERTEXT\n");
         return EXIT_FAILURE;
@@ -286,16 +286,16 @@ encrypt(int argc, char *argv[])
             if (chain == NULL)
                 error(EXIT_FAILURE, ENOMEM, "Unable to create anchors chain");
 
-            if (!petera_load(fp, chain))
+            if (!deo_load(fp, chain))
                 error(EXIT_FAILURE, 0, "Unable to load anchors");
         } else {
-            AUTO(PETERA_MSG, rep);
+            AUTO(DEO_MSG, rep);
 
-            rep = petera_request(anchors, &(ASN1_UTF8STRING) {
+            rep = deo_request(anchors, &(ASN1_UTF8STRING) {
                 .data = (uint8_t *) argv[i],
                 .length = strlen(argv[i])
-            }, &(PETERA_MSG) {
-                .type = PETERA_MSG_TYPE_CRT_REQ,
+            }, &(DEO_MSG) {
+                .type = DEO_MSG_TYPE_CRT_REQ,
                 .value.crt_req = &(ASN1_NULL) {0}
             });
 
@@ -303,16 +303,16 @@ encrypt(int argc, char *argv[])
                 error(EXIT_FAILURE, 0, "Unable to communicate with server");
 
             switch (rep->type) {
-            case PETERA_MSG_TYPE_CRT_REP:
-                if (!petera_validate(anchors, rep->value.crt_rep))
+            case DEO_MSG_TYPE_CRT_REP:
+                if (!deo_validate(anchors, rep->value.crt_rep))
                     error(EXIT_FAILURE, 0, "Server returned untrusted certs");
 
                 chain = STEAL(rep->value.crt_rep);
                 break;
 
-            case PETERA_MSG_TYPE_ERR:
+            case DEO_MSG_TYPE_ERR:
                 error(EXIT_FAILURE, ENOMEM, "Server returned: %s",
-                      petera_err_string(ASN1_ENUMERATED_get(rep->value.err)));
+                      deo_err_string(ASN1_ENUMERATED_get(rep->value.err)));
 
             default:
                 error(EXIT_FAILURE, 0, "Received unknown message from server");
@@ -342,6 +342,6 @@ encrypt(int argc, char *argv[])
     return 0;
 }
 
-petera_plugin petera = {
+deo_plugin deo = {
     encrypt, "Encrypts input to all specified targets"
 };

@@ -26,22 +26,22 @@
 static int
 query(int argc, char *argv[])
 {
-    PETERA_ERR err = PETERA_ERR_NONE;
+    DEO_ERR err = DEO_ERR_NONE;
     AUTO_STACK(X509, anchors);
-    AUTO(PETERA_MSG, rep);
+    AUTO(DEO_MSG, rep);
 
-    if (!petera_getopt(argc, argv, "ha:", "", NULL, NULL,
-                       petera_anchors, &anchors)
+    if (!deo_getopt(argc, argv, "ha:", "", NULL, NULL,
+                       deo_anchors, &anchors)
         || sk_X509_num(anchors) == 0 || argc - optind != 1) {
-        fprintf(stderr, "Usage: petera query -a <anchors> <target>\n");
+        fprintf(stderr, "Usage: deo query -a <anchors> <target>\n");
         return EXIT_FAILURE;
     }
 
-    rep = petera_request(anchors, &(ASN1_UTF8STRING) {
+    rep = deo_request(anchors, &(ASN1_UTF8STRING) {
         .data = (uint8_t *) argv[optind],
         .length = strlen(argv[optind])
-    }, &(PETERA_MSG) {
-        .type = PETERA_MSG_TYPE_CRT_REQ,
+    }, &(DEO_MSG) {
+        .type = DEO_MSG_TYPE_CRT_REQ,
         .value.crt_req = &(ASN1_NULL) {0}
     });
 
@@ -51,12 +51,12 @@ query(int argc, char *argv[])
     }
 
     switch (rep->type) {
-    case PETERA_MSG_TYPE_ERR:
+    case DEO_MSG_TYPE_ERR:
         err = ASN1_ENUMERATED_get(rep->value.err);
-        error(EXIT_FAILURE, 0, "Server error: %s", petera_err_string(err));
+        error(EXIT_FAILURE, 0, "Server error: %s", deo_err_string(err));
 
-    case PETERA_MSG_TYPE_CRT_REP:
-        if (!petera_validate(anchors, rep->value.crt_rep))
+    case DEO_MSG_TYPE_CRT_REP:
+        if (!deo_validate(anchors, rep->value.crt_rep))
             error(EXIT_FAILURE, 0, "Validation failed: %s", argv[optind]);
 
         for (int i = 0; i < sk_X509_num(rep->value.crt_rep); i++)
@@ -71,6 +71,6 @@ query(int argc, char *argv[])
     return EXIT_FAILURE;
 }
 
-petera_plugin petera = {
+deo_plugin deo = {
     query, "Fetches and verifies a server's encryption certificate chain"
 };

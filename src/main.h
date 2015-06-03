@@ -25,4 +25,4 @@
 typedef struct {
     int (*cmd)(int argc, char *argv[]);
     const char *summary;
-} petera_plugin;
+} deo_plugin;

@@ -25,7 +25,7 @@
 #include <unistd.h>
 
 bool
-petera_validate(const STACK_OF(X509) *anchors, STACK_OF(X509) *chain)
+deo_validate(const STACK_OF(X509) *anchors, STACK_OF(X509) *chain)
 {
     AUTO(X509_STORE_CTX, sctx);
     AUTO(X509_STORE, store);
@@ -58,7 +58,7 @@ petera_validate(const STACK_OF(X509) *anchors, STACK_OF(X509) *chain)
 }
 
 bool
-petera_load(FILE *fp, STACK_OF(X509) *certs)
+deo_load(FILE *fp, STACK_OF(X509) *certs)
 {
     AUTO_STACK(X509_INFO, infos);
 
@@ -86,9 +86,9 @@ petera_load(FILE *fp, STACK_OF(X509) *certs)
     return true;
 }
 
-PETERA_MSG *
-petera_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
-               const PETERA_MSG *req)
+DEO_MSG *
+deo_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
+               const DEO_MSG *req)
 {
     char trgt[target->length + 1];
     AUTO(SSL_CTX, ctx);
@@ -113,7 +113,7 @@ petera_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
     if (io == NULL)
         return NULL;
 
-    BIO_set_conn_port(io, PETERA_SOCKET);
+    BIO_set_conn_port(io, DEO_SOCKET);
     BIO_set_ssl_mode(io, SSL_MODE_AUTO_RETRY);
     if (BIO_set_conn_hostname(io, trgt) <= 0)
         return NULL;
@@ -124,14 +124,14 @@ petera_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
     if (BIO_do_handshake(io) <= 0)
         return NULL;
 
-    if (ASN1_item_i2d_bio(&PETERA_MSG_it, io, (PETERA_MSG *) req) <= 0)
+    if (ASN1_item_i2d_bio(&DEO_MSG_it, io, (DEO_MSG *) req) <= 0)
         return NULL;
 
-    return ASN1_item_d2i_bio(&PETERA_MSG_it, io, NULL);
+    return ASN1_item_d2i_bio(&DEO_MSG_it, io, NULL);
 }
 
 bool
-petera_anchors(char c, const char *arg, STACK_OF(X509) **misc)
+deo_anchors(char c, const char *arg, STACK_OF(X509) **misc)
 {
     AUTO_STACK(X509, tmp);
     AUTO(FILE, file);
@@ -147,7 +147,7 @@ petera_anchors(char c, const char *arg, STACK_OF(X509) **misc)
     if (tmp == NULL)
         return false;
 
-    if (!petera_load(file, tmp))
+    if (!deo_load(file, tmp))
         return false;
 
     if (*misc == NULL)
@@ -157,7 +157,7 @@ petera_anchors(char c, const char *arg, STACK_OF(X509) **misc)
 }
 
 bool
-petera_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
+deo_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
 {
     char options[strlen(opt) + strlen(keep) + 1];
     const int ind = ++optind;
@@ -191,7 +191,7 @@ petera_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
 
         va_start(ap, keep);
         for (size_t i = 0; options[i] != '\0' && !found; i++) {
-            petera_parse p;
+            deo_parse p;
             void *m;
 
             if (i == 0 && strchr("+-", options[i]) != NULL)
@@ -200,7 +200,7 @@ petera_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
             if (options[i] == ':')
                 continue;
 
-            p = va_arg(ap, petera_parse);
+            p = va_arg(ap, deo_parse);
             m = va_arg(ap, void *);
 
             if (options[i] != c)
@@ -229,7 +229,7 @@ petera_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
 }
 
 int
-petera_run(char *argv[], int in, int out)
+deo_run(char *argv[], int in, int out)
 {
     char path[PATH_MAX];
     int status = 0;
@@ -263,7 +263,7 @@ petera_run(char *argv[], int in, int out)
 }
 
 int
-petera_pipe(int *rend, int *wend)
+deo_pipe(int *rend, int *wend)
 {
     int in[2];
 
@@ -276,7 +276,7 @@ petera_pipe(int *rend, int *wend)
 }
 
 bool
-petera_isreg(const char *dir, struct dirent *de)
+deo_isreg(const char *dir, struct dirent *de)
 {
     char path[PATH_MAX];
     struct stat st;

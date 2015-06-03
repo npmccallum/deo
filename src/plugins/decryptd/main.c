@@ -104,7 +104,7 @@ option(char c, const char *arg, const char **misc)
 static int
 decryptd(int argc, char *argv[])
 {
-    const char *hp = PETERA_SOCKET;
+    const char *hp = DEO_SOCKET;
     const char *tlsfile = NULL;
     const char *encfile = NULL;
     const char *decdir = NULL;
@@ -119,13 +119,13 @@ decryptd(int argc, char *argv[])
     signal(SIGUSR1, on_signal);
     signal(SIGUSR2, on_signal);
 
-    if (!petera_getopt(argc, argv, "ht:e:d:l:", "", NULL, NULL,
+    if (!deo_getopt(argc, argv, "ht:e:d:l:", "", NULL, NULL,
                        option, &tlsfile, option, &encfile,
                        option, &decdir, option, &hp)
         || tlsfile == NULL || encfile == NULL || decdir == NULL
         || (ctx = ctx_init(tlsfile, encfile, decdir)) == NULL) {
         ERR_print_errors_fp(stderr);
-        fprintf(stderr, "Usage: petera decryptd "
+        fprintf(stderr, "Usage: deo decryptd "
                         "[-l <[host:]port>] -t <tlsfile> "
                         "-e <encfile> -d <decdir>\n");
         return EXIT_FAILURE;
@@ -144,9 +144,9 @@ decryptd(int argc, char *argv[])
     }
 
     while (true) {
-        PETERA_ERR err = PETERA_ERR_NONE;
+        DEO_ERR err = DEO_ERR_NONE;
         AUTO(ASN1_OCTET_STRING, pt);
-        AUTO(PETERA_MSG, in);
+        AUTO(DEO_MSG, in);
         AUTO(BIO, sio);
         AUTO_FD(cfd);
         int lfd;
@@ -157,27 +157,27 @@ decryptd(int argc, char *argv[])
         if (!do_accept(ctx->ctx, lfd, &cfd, &sio))
             continue;
 
-        in = d2i_bio_max(&PETERA_MSG_it, sio, NULL, PETERA_MAX_INPUT);
+        in = d2i_bio_max(&DEO_MSG_it, sio, NULL, DEO_MAX_INPUT);
         if (in == NULL)
             continue;
 
         switch (in->type) {
-        case PETERA_MSG_TYPE_CRT_REQ:
-            ASN1_item_i2d_bio(&PETERA_MSG_it, sio, &(PETERA_MSG) {
-                .type = PETERA_MSG_TYPE_CRT_REP,
+        case DEO_MSG_TYPE_CRT_REQ:
+            ASN1_item_i2d_bio(&DEO_MSG_it, sio, &(DEO_MSG) {
+                .type = DEO_MSG_TYPE_CRT_REP,
                 .value.crt_rep = ctx->crt
             });
             break;
 
-        case PETERA_MSG_TYPE_DEC_REQ:
+        case DEO_MSG_TYPE_DEC_REQ:
             err = decrypt(ctx, in->value.dec_req, &pt);
-            if (err != PETERA_ERR_NONE) {
+            if (err != DEO_ERR_NONE) {
                 SEND_ERR(sio, err);
                 break;
             }
 
-            ASN1_item_i2d_bio(&PETERA_MSG_it, sio, &(PETERA_MSG) {
-                .type = PETERA_MSG_TYPE_DEC_REP,
+            ASN1_item_i2d_bio(&DEO_MSG_it, sio, &(DEO_MSG) {
+                .type = DEO_MSG_TYPE_DEC_REP,
                 .value.dec_rep = pt
             });
             break;
@@ -196,4 +196,4 @@ error:
     return ret;
 }
 
-petera_plugin petera = { decryptd, NULL };
+deo_plugin deo = { decryptd, NULL };

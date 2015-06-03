@@ -81,7 +81,7 @@ make_keyfile(crypt_device *cd, const char *keydir, const uint8_t *rand,
     else {
         AUTO_FD(wpipe);
 
-        if (petera_pipe(&rpipe, &wpipe) != 0)
+        if (deo_pipe(&rpipe, &wpipe) != 0)
             return -errno;
 
         /* NOTE: this code depends on the kernel's pipe buffer being larger
@@ -97,7 +97,7 @@ make_keyfile(crypt_device *cd, const char *keydir, const uint8_t *rand,
     if (wfile < 0)
         return -errno;
 
-    err = petera_run(argv, rpipe, wfile);
+    err = deo_run(argv, rpipe, wfile);
     if (err != 0) {
         unlink(keyfile);
         return -err;
@@ -116,7 +116,7 @@ option(char c, const char *arg, const char **misc)
 static int
 cryptsetup(int argc, char *argv[])
 {
-    const char *keydir = PETERA_CONF "/disks.d";
+    const char *keydir = DEO_CONF "/disks.d";
     const char *device = NULL;
     AUTO_STACK(X509, anchors);
     const char *type = NULL;
@@ -126,10 +126,10 @@ cryptsetup(int argc, char *argv[])
     int nerr = 0;
     int slot = 0;
 
-    if (!petera_getopt(argc, argv, "hk:d:", "a:", NULL, NULL, option, &keydir,
-                       option, &device, petera_anchors, &anchors)
+    if (!deo_getopt(argc, argv, "hk:d:", "a:", NULL, NULL, option, &keydir,
+                       option, &device, deo_anchors, &anchors)
         || device == NULL || sk_X509_num(anchors) == 0 || argc - optind < 1) {
-        fprintf(stderr, "Usage: petera cryptsetup "
+        fprintf(stderr, "Usage: deo cryptsetup "
                         "[-k <keydir>] -d <device> "
                         "-a <anchors> <target> [...]\n");
         return EXIT_FAILURE;
@@ -179,6 +179,6 @@ cryptsetup(int argc, char *argv[])
     return 0;
 }
 
-petera_plugin petera = {
-    cryptsetup, "Enable petera on a LUKS partition"
+deo_plugin deo = {
+    cryptsetup, "Enable deo on a LUKS partition"
 };

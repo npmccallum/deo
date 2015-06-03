@@ -21,5 +21,5 @@
 #include "ctx.h"
 #include "../asn1.h"
 
-PETERA_ERR
-decrypt(ctx *ctx, PETERA_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt);
+DEO_ERR
+decrypt(ctx *ctx, DEO_MSG_DEC_REQ *dr, ASN1_OCTET_STRING **pt);

@@ -21,7 +21,7 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 
-#define PETERA_MAX_INPUT (1024 * 512)
+#define DEO_MAX_INPUT (1024 * 512)
 
 void *
 d2i_bio_max(const ASN1_ITEM *it, BIO *in, void *x, unsigned int max);

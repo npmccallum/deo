@@ -1,0 +1,11 @@
+[Unit]
+Description=Deo decryption daemon socket
+ConditionDirectoryNotEmpty=@DEO_CONF@/decrypt.d
+ConditionFileNotEmpty=@DEO_CONF@/decryptd.pem
+ConditionPathExists=@DEO_CONF@/encrypt.pem
+
+[Socket]
+ListenStream=@DEO_SOCKET@
+
+[Install]
+WantedBy=multi-user.target

@@ -23,14 +23,14 @@
 static int
 targets(int argc, char *argv[])
 {
-    AUTO(PETERA_HEADER, hdr);
+    AUTO(DEO_HEADER, hdr);
 
-    if (!petera_getopt(argc, argv, "h", "", NULL, NULL)) {
-        fprintf(stderr, "Usage: petera targets < ENCDATA > TARGETS\n");
+    if (!deo_getopt(argc, argv, "h", "", NULL, NULL)) {
+        fprintf(stderr, "Usage: deo targets < ENCDATA > TARGETS\n");
         return EXIT_FAILURE;
     }
 
-    hdr = d2i_fp_max(&PETERA_HEADER_it, stdin, NULL, PETERA_MAX_INPUT);
+    hdr = d2i_fp_max(&DEO_HEADER_it, stdin, NULL, DEO_MAX_INPUT);
     if (hdr == NULL) {
         ERR_print_errors_fp(stderr);
         return EXIT_FAILURE;
@@ -44,6 +44,6 @@ targets(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-petera_plugin petera = {
+deo_plugin deo = {
     targets, "Prints the targets for encrypted input"
 };
