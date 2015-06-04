@@ -21,8 +21,6 @@
 #include "../main.h"
 #include "askp.h"
 #include "iface.h"
-#include "list.h"
-#include "main.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -31,6 +29,10 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+#define TIMEOUT_BASE 5000
+#define TIMEOUT_EXT (rand() % 295000)
+#define ALLCNT (sizeof(struct all) / sizeof(struct pollfd))
 
 static void
 on_signal(int sig)
@@ -44,18 +46,28 @@ option(char c, const char *arg, const char **misc)
     return true;
 }
 
+struct all {
+    struct pollfd askp;
+    struct pollfd iface;
+};
+
 static int
 askpass(int argc, char *argv[])
 {
     const char *keydir = DEO_CONF "/disks.d";
-    struct iface *iface = NULL;
+    int timeout = TIMEOUT_BASE;
     AUTO_STACK(X509, anchors);
     struct askp *askp = NULL;
     int ret = EXIT_FAILURE;
     char *dargs[argc + 1];
-    struct pollfd fds[2];
     struct stat st;
+    int events;
     LIST(keys);
+
+    union {
+        struct pollfd all[ALLCNT];
+        struct all ind;
+    } fds;
 
     if (!deo_getopt(argc, argv, "hk:", "a:", NULL, NULL,
                        option, &keydir, deo_anchors, &anchors)) {
@@ -76,10 +88,10 @@ askpass(int argc, char *argv[])
         || !S_ISDIR(st.st_mode))
         error(EXIT_FAILURE, errno, "Unable to access key directory");
 
-    if (iface_new(&iface, &fds[0]) != 0)
+    if (askp_new(&askp, &fds.ind.askp) != 0)
         goto error;
 
-    if (askp_new(&askp, &fds[1]) != 0)
+    if (iface_new(&fds.ind.iface) != 0)
         goto error;
 
     signal(SIGINT, on_signal);
@@ -88,35 +100,41 @@ askpass(int argc, char *argv[])
     signal(SIGUSR1, on_signal);
     signal(SIGUSR2, on_signal);
 
-    while (poll(fds, sizeof(fds) / sizeof(*fds), 30000) > 0) {
-        for (size_t i = 0; i < sizeof(fds) / sizeof(*fds); i++) {
-            if (fds[i].revents & (POLLRDHUP | POLLERR | POLLHUP | POLLNVAL))
+    for (int i = 0; i < ALLCNT; i++)
+        fds.all[i].events |= POLLRDHUP;
+
+    while ((events = poll(fds.all, ALLCNT, timeout)) >= 0) {
+        bool process = false;
+
+        for (int i = 0; i < ALLCNT; i++) {
+            short mask = ~fds.all[i].events | POLLRDHUP;
+            if (fds.all[i].revents & mask)
                 goto error;
         }
 
-        if (fds[0].revents & fds[0].events) {
-            if (iface_event(iface, dargs, keydir, &keys) != 0)
-                goto error;
-        }
-        fds[0].revents = 0;
+        if (events == 0) {
+            askp_process(askp, dargs, keydir);
 
-        if (fds[1].revents & fds[1].events) {
-            if (askp_event(askp) != 0)
-                goto error;
-        }
-        fds[1].revents = 0;
+            if (!askp_more(askp))
+                break;
 
-        askp_process(askp, &keys);
+            timeout = TIMEOUT_BASE + TIMEOUT_EXT;
+            continue;
+        }
+
+        timeout = TIMEOUT_BASE;
+        process |= iface_route(&fds.ind.iface);
+        process |= askp_question(askp, &fds.ind.askp);
+        if (process)
+            askp_process(askp, dargs, keydir);
     }
 
     if (errno == EINTR || errno == 0)
         ret = EXIT_SUCCESS;
 
 error:
-    LIST_FOREACH(&keys, struct key, key, list)
-        free(key);
-
-    iface_free(iface);
+    close(fds.ind.iface.fd);
+    close(fds.ind.askp.fd);
     askp_free(askp);
     return ret;
 }

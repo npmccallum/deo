@@ -19,6 +19,8 @@
 #pragma once
 
 #include <poll.h>
+#include <stdbool.h>
+
 #include "list.h"
 
 struct askp;
@@ -26,11 +28,14 @@ struct askp;
 int
 askp_new(struct askp **ctx, struct pollfd *fd);
 
-int
-askp_event(struct askp *ctx);
+bool
+askp_question(struct askp *ctx, struct pollfd *fd);
 
 void
-askp_process(struct askp *ctx, struct list *keys);
+askp_process(struct askp *ctx, char *argv[], const char *keysdir);
+
+bool
+askp_more(struct askp *ctx);
 
 void
 askp_free(struct askp *ctx);

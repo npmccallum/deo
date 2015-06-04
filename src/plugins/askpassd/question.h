@@ -17,13 +17,18 @@
  */
 
 #include "list.h"
-#include <limits.h>
-#include <stdint.h>
-#include <unistd.h>
 
-struct key {
+#include <time.h>
+#include <limits.h>
+#include <sys/un.h>
+
+struct question {
     struct list list;
-    uint8_t key[256];
-    ssize_t len;
+    char name[PATH_MAX];
     char uuid[PATH_MAX];
+    struct sockaddr_un sock;
+    struct timespec time;
 };
+
+struct question *
+question_new(const char *dir, const char *name);

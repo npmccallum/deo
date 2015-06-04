@@ -19,16 +19,14 @@
 #pragma once
 
 #include <poll.h>
+#include <stdbool.h>
 #include "list.h"
 
-struct iface;
-
 int
-iface_new(struct iface **ctx, struct pollfd *fd);
+iface_new(struct pollfd *fd);
 
-int
-iface_event(struct iface *ctx, char *argv[],
-            const char *keysdir, struct list *keys);
+bool
+iface_route(struct pollfd *fd);
 
 void
-iface_free(struct iface *ctx);
+iface_decrypt(char *argv[], const char *keysdir, struct list *keys);

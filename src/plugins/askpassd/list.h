@@ -32,6 +32,8 @@ struct list {
     (type *) ((void *) (item) - offsetof(type, member)); \
 })
 
+#define LIST_EMPTY(list) ((list)->prev == (list) && (list)->next == (list))
+
 #define LIST_FOREACH(list, type, name, member) \
     for (type *__lst = LIST_ITEM(list, type, member), \
               *name  = LIST_ITEM(__lst->member.next, type, member), \

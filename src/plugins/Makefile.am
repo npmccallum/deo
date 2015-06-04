@@ -29,14 +29,15 @@ decryptd_la_SOURCES = \
 	decryptd/main.c
 
 askpassd_la_SOURCES = \
+	askpassd/question.c \
+	askpassd/question.h \
 	askpassd/askp.c \
 	askpassd/askp.h \
 	askpassd/iface.c \
 	askpassd/iface.h \
 	askpassd/list.c \
 	askpassd/list.h \
-	askpassd/main.c \
-	askpassd/main.h
+	askpassd/main.c
 
 install-data-hook:
 	$(MKDIR_P) $(DESTDIR)/$(DEO_CONF)/decrypt.d
