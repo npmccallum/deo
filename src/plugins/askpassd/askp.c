@@ -342,11 +342,10 @@ askp_process(struct askp *ctx, struct list *keys)
         if (!key)
             continue;
 
-        char buf[key->len * 2 + 2];
+        char buf[key->len + 2];
 
         buf[0] = '+';
-        for (ssize_t i = 0; i < key->len; i++)
-            snprintf(&buf[i * 2 + 1], 3, "%02X", key->key[i]);
+        strncpy(buf + 1, (char *) key->key, key->len);
 
         strcpy(addr.sun_path, item->sock);
         sendto(ctx->sock, buf, sizeof(buf), 0, &addr, sizeof(addr));
