@@ -47,7 +47,7 @@ find_prefix_in_section(const char *start, const char *end, const char *prefix,
 
     startl = memmem(start, end - start, prefix, plen);
     if (startl == NULL)
-        return NULL;
+        return ENOENT;
     startl += plen;
 
     endl = memchr(startl, '\n', end - startl);
