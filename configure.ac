@@ -22,7 +22,7 @@ PKG_PROG_PKG_CONFIG([0.25])
 
 PKG_CHECK_MODULES([OPENSSL], [openssl])
 PKG_CHECK_MODULES([CRYPTSETUP], [libcryptsetup])
-PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd], [], [PKG_CHECK_MODULES([LIBSYSTEMD], [systemd], [], AC_MSG_ERROR([libsystemd/systemd-devel not found]))])
+PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd], [], [PKG_CHECK_MODULES([LIBSYSTEMD], [libsystemd-daemon], [], AC_MSG_ERROR([libsystemd/systemd-devel not found]))])
 
 PKG_CHECK_EXISTS([systemd], [], [AC_MSG_ERROR([systemd not found])])
 AC_ARG_WITH([systemdsystemunitdir],
