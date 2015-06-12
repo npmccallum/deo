@@ -7,13 +7,6 @@ check() {
         [ -e "$i" ] || return 255
     done
 
-    # If deo is not installed,
-    # then we cannot support it
-    require_binaries deo \
-        @DEO_PLUGINS@/askpassd.so \
-        @DEO_PLUGINS@/decrypt.so \
-        || return 1
-
     return 0
 }
 
