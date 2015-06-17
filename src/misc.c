@@ -235,11 +235,11 @@ deo_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
 int
 deo_run(char *argv[], int in, int out)
 {
-    char path[PATH_MAX];
+    char path[PATH_MAX + 1] = {};
     int status = 0;
     pid_t pid;
 
-    strncpy(path, argv[0], sizeof(path));
+    strncpy(path, argv[0], PATH_MAX);
     if (strchr(argv[0], '/') != NULL) {
         if (realpath(argv[0], path) == NULL)
             return errno;
