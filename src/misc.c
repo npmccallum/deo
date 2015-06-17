@@ -207,11 +207,15 @@ deo_getopt(int argc, char **argv, const char *opt, const char *keep, ...)
                 continue;
 
             found = true;
-            if (p == NULL)
+            if (p == NULL) {
+                va_end(ap);
                 return false;
+            }
 
-            if (!p(c, options[1 + 1] == ':' ? optarg : NULL, m))
+            if (!p(c, options[1 + 1] == ':' ? optarg : NULL, m)) {
+                va_end(ap);
                 return false;
+            }
         }
         va_end(ap);
 
