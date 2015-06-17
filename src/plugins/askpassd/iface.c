@@ -60,8 +60,8 @@ iface_new(struct pollfd *fd)
     if (bind(fd->fd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
         return errno;
 
-    request_existing(fd->fd, AF_INET);
-    request_existing(fd->fd, AF_INET6);
+    (void) request_existing(fd->fd, AF_INET);
+    (void) request_existing(fd->fd, AF_INET6);
 
     return 0;
 }

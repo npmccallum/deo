@@ -210,7 +210,8 @@ askp_process(struct askp *ctx, char *argv[], const char *keysdir)
             }
         }
 
-        sendto(ctx->sock, hex, strlen(hex), 0, &q->sock, sizeof(q->sock));
+        (void) sendto(ctx->sock, hex, strlen(hex), 0,
+                      &q->sock, sizeof(q->sock));
     }
 }
 
