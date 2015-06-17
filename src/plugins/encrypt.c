@@ -86,6 +86,13 @@ make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
     int ctl = 0;
     int tmp = 0;
 
+    memset(ct, 0, sizeof(ct));
+    memset(iv, 0, sizeof(iv));
+    memset(ekeys, 0, sizeof(ekeys));
+    memset(keys, 0, sizeof(keys));
+    memset(tag, 0, sizeof(tag));
+    memset(ekeysl, 0, sizeof(ekeysl));
+
     ASN1_OBJECT_free(dr->cipher);
     ASN1_OBJECT_free(dr->digest);
     dr->cipher = OBJ_nid2obj(EVP_CIPHER_nid(cipher));
@@ -158,7 +165,7 @@ make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
     ret = true;
 
 error:
-    for (int i = 0; i < sk_X509_num(certs); i++)
+    for (int i = 0; i < sk_X509_num(certs) && ekeys[i] != NULL; i++)
         OPENSSL_free(ekeys[i]);
 
     return ret;
