@@ -103,7 +103,7 @@ ctx_init(const char *tls, const char *enc, const char *dec)
         return NULL;
     memset(ctx, 0, sizeof(*ctx));
 
-    ctx->ctx = SSL_CTX_new(TLSv1_2_server_method());
+    ctx->ctx = SSL_CTX_new(SSLv23_server_method());
     if (ctx->ctx == NULL)
         return NULL;
 

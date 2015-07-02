@@ -100,7 +100,7 @@ deo_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
     if (anchors == NULL || sk_X509_num(anchors) == 0)
         return NULL;
 
-    ctx = SSL_CTX_new(TLSv1_2_client_method());
+    ctx = SSL_CTX_new(SSLv23_client_method());
     if (ctx == NULL)
         return NULL;
 
