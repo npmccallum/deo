@@ -6,6 +6,7 @@ ConditionPathExists=@DEO_CONF@/encrypt.pem
 
 [Socket]
 ListenStream=@DEO_SOCKET@
+Accept=true
 
 [Install]
 WantedBy=multi-user.target

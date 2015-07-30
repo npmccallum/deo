@@ -1,5 +1,5 @@
 AM_LDFLAGS = -module -avoid-version -export-symbols-regex ^deo$
-AM_CFLAGS = \
+AM_CFLAGS = @CRYPTSETUP_CFLAGS@ @LIBSYSTEMD_CFLAGS@ \
 	-Wall \
 	-Wextra \
 	-Werror \
@@ -16,11 +16,8 @@ plugin_LTLIBRARIES = \
 	query.la \
 	targets.la
 
-cryptsetup_la_CFLAGS = $(AM_CFLAGS) @CRYPTSETUP_CFLAGS@
 cryptsetup_la_LIBADD = @CRYPTSETUP_LIBS@
 
-decryptd_la_CFLAGS = $(AM_CFLAGS) @LIBSYSTEMD_CFLAGS@
-decryptd_la_LIBADD = @LIBSYSTEMD_LIBS@
 decryptd_la_SOURCES = \
 	decryptd/ctx.c \
 	decryptd/ctx.h \
@@ -48,8 +45,8 @@ install-data-hook:
 
 CLEANFILES = $(systemdsystemunit_DATA) $(dracut_SCRIPTS)
 EXTRA_DIST = \
-	decryptd/deo-decryptd.service.in \
 	decryptd/deo-decryptd.socket.in \
+	decryptd/deo-decryptd@.service.in \
 	askpassd/deo-askpassd.path.in \
 	askpassd/deo-askpassd.service.in \
 	askpassd/module-setup.sh.in
@@ -57,7 +54,7 @@ EXTRA_DIST = \
 dracut_SCRIPTS = askpassd/module-setup.sh
 systemdsystemunit_DATA = \
 	decryptd/deo-decryptd.socket \
-	decryptd/deo-decryptd.service \
+	decryptd/deo-decryptd@.service \
 	askpassd/deo-askpassd.path \
 	askpassd/deo-askpassd.service
 
