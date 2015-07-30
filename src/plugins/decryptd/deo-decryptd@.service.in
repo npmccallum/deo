@@ -6,4 +6,3 @@ ConditionPathExists=@DEO_CONF@/encrypt.pem
 
 [Service]
 ExecStart=@bindir@/deo decryptd -t @DEO_CONF@/decryptd.pem -e @DEO_CONF@/encrypt.pem -d @DEO_CONF@/decrypt.d
-StandardError=syslog
