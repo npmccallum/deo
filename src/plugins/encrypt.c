@@ -45,7 +45,7 @@ make_targets(const STACK_OF(X509) *certs, STACK_OF(ASN1_UTF8STRING) *targets)
         if (target == NULL)
             return ENOMEM;
 
-        if (sk_ASN1_UTF8STRING_push(targets, target) != 1) {
+        if (sk_ASN1_UTF8STRING_push(targets, target) <= 0) {
             ASN1_UTF8STRING_free(target);
             return ENOMEM;
         }
@@ -115,7 +115,7 @@ make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
         if (k == NULL)
             goto error;
 
-        if (SKM_sk_push(DEO_KEY, dr->keys, k) != 1) {
+        if (SKM_sk_push(DEO_KEY, dr->keys, k) <= 0) {
             DEO_KEY_free(k);
             goto error;
         }
@@ -132,7 +132,7 @@ make_dec_req(const EVP_CIPHER *cipher, const EVP_MD *md,
         return false;
 
     if (EVP_SealInit(cctx, cipher, ekeys, ekeysl,
-                     iv, keys, sk_X509_num(certs)) != 1)
+                     iv, keys, sk_X509_num(certs)) != sk_X509_num(certs))
         goto error;
 
     if (ASN1_OCTET_STRING_set(dr->iv, iv, sizeof(iv)) != 1)
