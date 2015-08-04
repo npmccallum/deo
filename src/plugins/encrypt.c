@@ -295,6 +295,9 @@ encrypt(int argc, char *argv[])
 
             if (!deo_load(fp, chain))
                 error(EXIT_FAILURE, 0, "Unable to load anchors");
+
+            if (sk_X509_num(chain) == 0)
+                error(EXIT_FAILURE, 0, "File '%s' is empty", argv[i]);
         } else {
             AUTO(DEO_MSG, rep);
 
@@ -324,10 +327,10 @@ encrypt(int argc, char *argv[])
             default:
                 error(EXIT_FAILURE, 0, "Received unknown message from server");
             }
-        }
 
-        if (sk_X509_num(chain) == 0)
-            error(EXIT_FAILURE, 0, "Server returned no certs");
+            if (sk_X509_num(chain) == 0)
+                error(EXIT_FAILURE, 0, "Empty reply from '%s'", argv[i]);
+        }
 
         tmp = sk_X509_shift(chain);
         if (sk_X509_push(certs, tmp) <= 0) {
