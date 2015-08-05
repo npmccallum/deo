@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 #
 # Copyright (c) 2015 Red Hat, Inc.
 # Author: Nathaniel McCallum <npmccallum@redhat.com>
@@ -56,11 +56,7 @@ class Test(unittest.TestCase):
     def __query(self, ca, srv):
         cmd = "$DEO_BIN query -a %s %s" % (ca.certificate, srv.hp)
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-        try:
-            out, err = p.communicate(timeout=5)
-        except TimeoutExpired:
-            p.kill()
-            out, err = p.communicate()
+        out, err = p.communicate()
         sep = "-----BEGIN CERTIFICATE-----".encode('utf-8')
         return p.returncode == 0 and len(out.split(sep)) == 4
 
@@ -70,23 +66,13 @@ class Test(unittest.TestCase):
 
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, shell=True)
-        try:
-            out, err = p.communicate(input=input, timeout=5)
-        except subprocess.TimeoutExpired:
-            p.kill()
-            out, err = p.communicate()
-
+        out, err = p.communicate(input=input)
         return None if p.returncode != 0 else out
 
     def __targets(self, input):
         p = subprocess.Popen("$DEO_BIN targets", stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, shell=True)
-        try:
-            out, err = p.communicate(input=input, timeout=5)
-        except TimeoutExpired:
-            p.kill()
-            out, err = p.communicate()
-
+        out, err = p.communicate(input=input)
         if p.returncode != 0:
             return None
 
@@ -95,12 +81,7 @@ class Test(unittest.TestCase):
     def __decrypt(self, input):
         p = subprocess.Popen("$DEO_BIN decrypt", stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, shell=True)
-        try:
-            out, err = p.communicate(input=input, timeout=5)
-        except TimeoutExpired:
-            p.kill()
-            out, err = p.communicate()
-
+        out, err = p.communicate(input=input)
         return None if p.returncode != 0 else out
 
     def setUp(self):

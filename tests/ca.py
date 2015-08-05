@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 #
 # Copyright (c) 2015 Red Hat, Inc.
 # Author: Nathaniel McCallum <npmccallum@redhat.com>
@@ -24,7 +24,7 @@ import subprocess
 import tempfile
 
 
-class CA:
+class CA(object):
     CNF = """
 HOME        = .
 RANDFILE    = $ENV::HOME/.rnd

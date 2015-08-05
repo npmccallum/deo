@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python
 #
 # Copyright (c) 2015 Red Hat, Inc.
 # Author: Nathaniel McCallum <npmccallum@redhat.com>
@@ -25,7 +25,7 @@ import socket
 import tempfile
 
 
-class Server:
+class Server(object):
     @property
     def hp(self):
         if self.port is None:

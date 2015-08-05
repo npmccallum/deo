@@ -10,7 +10,7 @@ AC_PROG_SED
 AM_INIT_AUTOMAKE([subdir-objects foreign std-options])
 AM_SILENT_RULES([yes])
 AM_PROG_CC_C_O
-AM_PATH_PYTHON([3])
+AM_PATH_PYTHON
 
 LT_INIT([disable-static])
 LT_SYS_MODULE_EXT
