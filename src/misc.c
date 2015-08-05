@@ -24,6 +24,8 @@
 #include <error.h>
 #include <unistd.h>
 
+#include <openssl/x509v3.h>
+
 bool
 deo_validate(const STACK_OF(X509) *anchors, STACK_OF(X509) *chain)
 {
@@ -86,22 +88,101 @@ deo_load(FILE *fp, STACK_OF(X509) *certs)
     return true;
 }
 
+static bool
+equals(const ASN1_IA5STRING *ia5str, const char *str)
+{
+    for (int i = 0; i < ia5str->length; i++) {
+        if (ia5str->data[i] == '\0')
+            return false;
+    }
+
+    if (ia5str->length != strlen(str))
+        return false;
+
+    return strncmp((const char *) ia5str->data, str, ia5str->length) == 0;
+}
+
+static bool
+verify_hostname(BIO *io, const char *hostname)
+{
+    STACK_OF(GENERAL_NAME) *sans = NULL;
+    X509_NAME_ENTRY *e = NULL;
+    X509_NAME *name = NULL;
+    X509 *cert = NULL;
+    SSL *ssl = NULL;
+    int idx = -1;
+
+    BIO_get_ssl(io, &ssl);
+    if (ssl == NULL)
+        return false;
+
+    cert = SSL_get_peer_certificate(ssl);
+    if (cert == NULL)
+        return false;
+
+    sans = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+    if (sans != NULL) {
+        for (int i = 0; i < sk_GENERAL_NAMES_num(sans); i++) {
+            const GENERAL_NAME *san;
+
+            san = sk_GENERAL_NAME_value(sans, i);
+            if (san == NULL)
+                continue;
+
+            if (san->type != GEN_DNS)
+                continue;
+
+            if (equals(san->d.dNSName, hostname)) {
+                sk_GENERAL_NAMES_pop_free(sans, GENERAL_NAME_free);
+                return true;
+            }
+        }
+
+        sk_GENERAL_NAMES_pop_free(sans, GENERAL_NAME_free);
+        return false;
+	}
+
+    name = X509_get_subject_name(cert);
+    if (name == NULL)
+        return false;
+
+    idx = X509_NAME_get_index_by_NID(name, NID_commonName, -1);
+    if (idx < 0)
+        return false;
+
+    e = X509_NAME_get_entry(name, idx);
+    if (e == NULL)
+        return false;
+
+    return equals(X509_NAME_ENTRY_get_data(e), hostname);
+}
+
 DEO_MSG *
 deo_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
                const DEO_MSG *req)
 {
+    const int ops = SSL_OP_NO_COMPRESSION | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
     char trgt[target->length + 1];
     AUTO(SSL_CTX, ctx);
     AUTO(BIO, io);
 
-    memset(trgt, 0, sizeof(trgt));
+    for (size_t i = 0; i < target->length; i++) {
+        if (target->data[i] == '\0')
+            return NULL;
+    }
+
     memcpy(trgt, target->data, target->length);
+    trgt[target->length] = '\0';
 
     if (anchors == NULL || sk_X509_num(anchors) == 0)
         return NULL;
 
     ctx = SSL_CTX_new(SSLv23_client_method());
     if (ctx == NULL)
+        return NULL;
+
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+    if (SSL_CTX_set_options(ctx, ops) <= 0)
         return NULL;
 
     for (int i = 0; anchors != NULL && i < sk_X509_num(anchors); i++) {
@@ -122,6 +203,9 @@ deo_request(const STACK_OF(X509) *anchors, const ASN1_UTF8STRING *target,
         return NULL;
 
     if (BIO_do_handshake(io) <= 0)
+        return NULL;
+
+    if (!verify_hostname(io, trgt))
         return NULL;
 
     if (ASN1_item_i2d_bio(&DEO_MSG_it, io, (DEO_MSG *) req) <= 0)

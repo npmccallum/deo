@@ -26,9 +26,7 @@ import subprocess
 
 
 class Test(unittest.TestCase):
-    def __makeServer(self, host, port=None):
-        subj = '/CN=' + host + ('' if port is None else (':%d' % port))
-
+    def __makeServer(self, subj, host, port=None):
         tls_key = self.ca_A_tls.key()
         tls_csr = self.ca_A_tls.csr(tls_key, subj)
         tls_crt = self.ca_A_tls.crt(tls_csr)
@@ -112,8 +110,8 @@ class Test(unittest.TestCase):
         self.ca_A_tls = CA('/CN=A_tls', self.ca_A)
         self.ca_A_enc = CA('/CN=A_enc', self.ca_A)
 
-        self.srvA = self.__makeServer('localhost')
-        self.srvB = self.__makeServer('localhost', 5701)
+        self.srvA = self.__makeServer('/CN=localhost', 'localhost')
+        self.srvB = self.__makeServer('/CN=localhost:5701', 'localhost', 5701)
 
     def testQuery(self):
         "Test that basic querying works."
@@ -170,6 +168,15 @@ class Test(unittest.TestCase):
             assert self.__encrypt(pt, self.ca_A_tls, self.srvA) is None
         with self.srvA:
             assert self.__encrypt(pt, self.ca_A_enc, self.srvA) is None
+
+    def testHostnameVerification(self):
+        srv = self.__makeServer('/CN=localhost:5702', 'localhost')
+        with srv:
+            assert not self.__query(self.ca_A, srv)
+
+        pt = "hello".encode('utf-8')
+        with srv:
+            assert self.__encrypt(pt, self.ca_A, srv) is None
 
 if __name__ == '__main__':
     unittest.main()
