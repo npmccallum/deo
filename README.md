@@ -78,36 +78,40 @@ The Deo server is a simple systemd activated service. It listens on port
 right. Here again, we test to make sure you don't expose sensitive
 certificates.
 
-All communications are encrypted. Each Deo server offers only one
-certificate chain for encryption, but can decrypt using multiple certificates.
-This lets you set a new encryption key while still using old ones for
-decryption.
+Unlike most services, Deo uses two certificate/key pairs. All certificate
+material is stored in PEM format.
 
-The Deo server NEVER writes anything and is completely stateless. Feel free
-to run it in a container if you like.
+The first certificate/key pair is for encrypting all communications. This is
+just a standard TLS certificate setup. Simply place the certificate, its
+private key and any required intermediate certificates into
+/etc/deo/decryptd.pem.
 
-###### Configuration
+The second certificate/key pair is used for encryption and decryption of the
+client secrets and is setup in a slightly more complicated two-step process.
 
-The Deo daemon requires only three configuration items:
+First, all three components (the certificate, the private key and any required
+intermediate certificates) should be placed in a .pem file of your choosing
+in the /etc/deo/decrypt.d/ directory. When the server receives a decryption
+request, it will attempt to decrypt the data using the certificates stored
+here. Hence, installing this .pem file into this directory permits the server
+to decrypt incoming decryption requests using this certificate.
 
-1. A PEM file containing the TLS certificate chain and private key.
-2. A PEM file containing the encryption certificate chain.
-3. A directory of PEM files containing decryption certs/keys.
+Second, the certificate itself and any intermediate certificates (but not the
+private key), should be placed into /etc/deo/encrypt.pem. This data is
+returned directly to clients who query for the encryption certificate chain.
+On important note is necessary. This file MUST contain a certificate with a
+subject with a commonName that resolves to the decryption server. This is the
+hostname that the client will use during decryption. This hostname may be an
+IP address.
 
-In the default install, these items are, respectively, located at:
+Why place the same certificate information in two different places? The Deo
+decryption service advertises only one encryption certificate chain but can
+handle decryption requests for multiple certificates. This allows for easy
+transitional certificate rotation. You can swap in a new certificate (for
+new encryption and decryption requests) but still retain the old certificate
+to handle decryption requests for already encrypted data.
 
-1. /etc/deo/decryptd.pem
-2. /etc/deo/encrypt.pem
-3. /etc/deo/decrypt.d
-
-On important note is necessary. The encryption certificate advertised to the
-client MUST have a subject with a commonName that resolves to the decryption
-server. This is the hostname that the client will use during decryption. This
-hostname may be an IP address.
-
-###### Enablement
-
-To enable the server, just run the following as root:
+Once certificates are installed, just run the following as root:
 
     # systemctl enable deo-decryptd.socket
     # systemctl start deo-decryptd.socket
@@ -129,9 +133,9 @@ documentation.
 Second, we will add a new random key to the pre-existing LUKS encrypted disk
 and then encrypt it using Deo in a known location. This command works
 exactly like the encrypt command with the exception that a LUKS encrypted disk
-must be specified:
+is specified rather than passing data using stdin/stdout:
 
-    # deo cryptsetup -d /dev/<disk> -a <anchor> <target>
+    # deo cryptsetup -d /dev/sda1 -a anchor.pem one.me.com
 
 Finally, we need to rebuild the system's initramfs:
 
