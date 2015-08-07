@@ -100,9 +100,9 @@ Second, the certificate itself and any intermediate certificates (but not the
 private key), should be placed into /etc/deo/encrypt.pem. This data is
 returned directly to clients who query for the encryption certificate chain.
 On important note is necessary. This file MUST contain a certificate with a
-subject with a commonName that resolves to the decryption server. This is the
-hostname that the client will use during decryption. This hostname may be an
-IP address.
+subject with a commonName that resolves to the decryption server (including
+the port if a non-standard port is used). This is the hostname that the client
+will use during decryption. This hostname may be an IP address.
 
 Why place the same certificate information in two different places? The Deo
 decryption service advertises only one encryption certificate chain but can
