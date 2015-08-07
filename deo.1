@@ -1,0 +1,115 @@
+.TH "deo" "1" "August 2015" "" ""
+.SH NAME
+deo \- network bound encryption
+.SH SYNOPSIS
+
+deo query -a ANCHORS HOST[:PORT]
+.br
+deo encrypt -a ANCHORS HOST[:PORT]|FILE ...
+.br
+deo decrypt [-a ANCHORS] [HOST[:PORT] ...]
+.br
+deo targets
+
+deo cryptsetup [-k KEYDIR] -d DEVICE -a ANCHORS HOST[:PORT]|FILE ...
+
+.SH DESCRIPTION
+Deo encrypts data to one or more network decryption services (called targets).
+
+A target need not be online at encryption time (an offline copy of the
+target's encryption certificate is sufficient). However, once data is encrypted
+to the targets, it cannot be decrypted without contacting the one of them.
+
+Note that none of the encrypted data ever passes over the wire. Instead, only a
+randomly generated key is transferred. This means that a compromise of the
+target service or network transport does not compromise your data.
+
+.SH TRUST ANCHORS
+Most commands take a "-a ANCHORS" argument. This argument specifies a
+PEM-encoded file containing the root certificates to trust for all operations.
+In the most common use, this will contain your institution's CA signing
+certificate or one of its sub-CA certificates.
+
+.B SECURITY NOTE:
+It is important that you not use a third-party CA for this
+trust. If you do, it will severely compromise your security.
+
+.SH USAGE
+.B deo query -a ANCHORS HOST[:PORT]
+
+.in +4
+Downloads a target's encryption certificate chain for offline use.
+
+If the certificate chain passes trust validation, it is printed to standard
+output in PEM format.
+.in
+
+.B deo encrypt -a ANCHORS HOST[:PORT]|FILE ...
+
+.in +4
+Encrypts data to all specified targets.
+
+Plaintext data is passed on standard input and the encrypted ciphertext is
+returned on standard output. The specified target(s) may be either:
+
+    * a hostname with optional port
+    * a PEM-encoded file (
+.B deo query
+)
+.in
+
+.B deo decrypt [-a ANCHORS] [HOST[:PORT] ...]
+
+.in +4
+Decrypts data using the first available target.
+
+The ciphertext output data from
+.B deo encrypt
+is passed to decrypt on standard
+input. If a trusted target can be contacted and the operation succeeds, the
+plaintext data is returned on standard output.
+
+No arguments are required because
+.B deo encrypt
+embeds the anchors
+and targets used into its output. However, if other anchors or targets are
+required for some reason, they can be specified here.
+.in
+
+.B deo targets
+
+.in +4
+Prints the targets embedded into the encrypted ciphertext.
+
+The ciphertext output data from
+.B deo encrypt
+is passed to
+.B deo targets
+on standard input. The embedded targets are printed to standard output in
+priority order.
+.in
+
+.B deo cryptsetup [-k KEYDIR] -d DEVICE -a ANCHORS HOST[:PORT]|FILE ...
+
+.in +4
+Binds a LUKS-encrypted DEVICE to all specified targets.
+
+This command works essentially like
+.B deo encrypt
+except that it binds LUKS-encrypted disks instead of encrypting plaintext data.
+A new cryptographically-secure random key is installed into the LUKS header of
+the specified DEVICE. This key is then encrypted using
+.B deo encrypt
+and stored in the KEYDIR using the UUID of the specified DEVICE as the filename.
+When the system reboots, the disk will automatically unlock if and only if it
+can reach one of the trusted targets.
+
+.B NOTE:
+If you are encrypting the root filesystem, you
+.B MUST
+run
+.B dracut
+to rebuild your initramfs. For more information, see the
+.B dracut(8)
+documentation.
+.in

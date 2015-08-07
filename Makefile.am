@@ -12,3 +12,5 @@ EXTRA_DIST = README.md tests/test.py tests/ca.py tests/server.py
 
 AM_TESTS_ENVIRONMENT = export DEO_PLUGINS=src/plugins/.libs DEO_BIN=src/deo;
 TESTS = tests/test.py
+
+dist_man_MANS = deo.1
