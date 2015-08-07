@@ -89,17 +89,20 @@ deo_load(FILE *fp, STACK_OF(X509) *certs)
 }
 
 static bool
-equals(const ASN1_IA5STRING *ia5str, const char *str)
+equals(ASN1_IA5STRING *ia5str, const char *str)
 {
-    for (int i = 0; i < ia5str->length; i++) {
-        if (ia5str->data[i] == '\0')
+    const char *s = (const char *) ASN1_STRING_data(ia5str);
+    int l = ASN1_STRING_length(ia5str);
+
+    if (l != strlen(str))
+        return false;
+
+    for (int i = 0; i < l; i++) {
+        if (s[i] == '\0')
             return false;
     }
 
-    if (ia5str->length != strlen(str))
-        return false;
-
-    return strncmp((const char *) ia5str->data, str, ia5str->length) == 0;
+    return strncasecmp(s, str, l) == 0;
 }
 
 static bool
