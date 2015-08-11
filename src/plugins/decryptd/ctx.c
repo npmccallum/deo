@@ -91,6 +91,7 @@ ctx_free(ctx *ctx)
 ctx *
 ctx_init(const char *tls, const char *enc, const char *dec)
 {
+    const int ops = SSL_OP_NO_COMPRESSION | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
     AUTO(EVP_PKEY, prv);
     AUTO(FILE, file);
     AUTO(ctx, ctx);
@@ -105,6 +106,9 @@ ctx_init(const char *tls, const char *enc, const char *dec)
 
     ctx->ctx = SSL_CTX_new(SSLv23_server_method());
     if (ctx->ctx == NULL)
+        return NULL;
+
+    if (SSL_CTX_set_options(ctx, ops) <= 0)
         return NULL;
 
     if (SSL_CTX_use_certificate_chain_file(ctx->ctx, tls) <= 0)
