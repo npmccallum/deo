@@ -125,7 +125,7 @@ verify_hostname(BIO *io, const char *hostname)
 
     sans = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
     if (sans != NULL) {
-        for (int i = 0; i < sk_GENERAL_NAMES_num(sans); i++) {
+        for (int i = 0; i < sk_GENERAL_NAME_num(sans); i++) {
             const GENERAL_NAME *san;
 
             san = sk_GENERAL_NAME_value(sans, i);
@@ -136,12 +136,12 @@ verify_hostname(BIO *io, const char *hostname)
                 continue;
 
             if (equals(san->d.dNSName, hostname)) {
-                sk_GENERAL_NAMES_pop_free(sans, GENERAL_NAME_free);
+                sk_GENERAL_NAME_pop_free(sans, GENERAL_NAME_free);
                 return true;
             }
         }
 
-        sk_GENERAL_NAMES_pop_free(sans, GENERAL_NAME_free);
+        sk_GENERAL_NAME_pop_free(sans, GENERAL_NAME_free);
         return false;
 	}
 
