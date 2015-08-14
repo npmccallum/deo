@@ -5,7 +5,8 @@ AM_CFLAGS = @CRYPTSETUP_CFLAGS@ @LIBSYSTEMD_CFLAGS@ \
 	-Werror \
 	-Wno-missing-field-initializers \
 	-Wno-unused-parameter \
-	-Wno-sign-compare
+	-Wno-sign-compare \
+	-Wstrict-aliasing
 
 plugin_LTLIBRARIES = \
 	askpassd.la \

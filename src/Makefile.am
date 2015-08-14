@@ -6,7 +6,8 @@ AM_CFLAGS = \
 	-Werror \
 	-Wno-missing-field-initializers \
 	-Wno-unused-parameter \
-	-Wno-sign-compare
+	-Wno-sign-compare \
+	-Wstrict-aliasing
 
 bin_PROGRAMS = deo
 deo_CFLAGS = $(AM_CFLAGS) @OPENSSL_CFLAGS@ -ldl
