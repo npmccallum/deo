@@ -108,7 +108,7 @@ ctx_init(const char *tls, const char *enc, const char *dec)
     if (ctx->ctx == NULL)
         return NULL;
 
-    if (SSL_CTX_set_options(ctx, ops) <= 0)
+    if (SSL_CTX_set_options(ctx->ctx, ops) <= 0)
         return NULL;
 
     if (SSL_CTX_use_certificate_chain_file(ctx->ctx, tls) <= 0)
